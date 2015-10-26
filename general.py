@@ -1,4 +1,5 @@
 RESOURCE_PATH = "resources/"
+import pickle
 
 ## Represents a model that has either static or animated frame animated texture.
 
@@ -48,6 +49,23 @@ class LevelProp:
     self.orientation = orientation       ##< rotation in degrees
 
 class Level:
+  ## Class static method, saves the level into given file.
+  
+  def save_to_file(level, filename):
+    output_file = open(filename,"w")
+    pickle.dump(level,output_file)
+    output_file.close()
+  
+  ## Class static method, loads the level from given file and returns it.
+  #  the level argument has to be there because of python interpreter
+  #  for some reason.
+  
+  def load_from_file(level, filename):
+    input_file = open(filename,"r")
+    result = pickle.load(input_file)
+    input_file.close()
+    return result
+  
   def __init__(self, width, height, default_tile=None):
     self.layout = [[None for i in range(height)] for j in range(width)]
     self.width = width

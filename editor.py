@@ -1,5 +1,6 @@
 from Tkinter import *
 from ttk import Frame, Button, Label, Style
+import tkFileDialog
 import math
 from general import *
 
@@ -14,6 +15,24 @@ class Editor(Frame):
     self.parent = parent
     self.init_ui()
         
+  def on_save_file_clicked(self):
+    filename = tkFileDialog.asksaveasfilename()
+    
+    if len(filename) == 0:
+      return
+    
+    Level.save_to_file(self.level,filename)
+   
+  def on_load_file_clicked(self):
+    filename = tkFileDialog.askopenfilename()
+    
+    if len(filename) == 0:
+      return
+    
+    self.level = Level.load_from_file(self.level,"test_output.txt")
+    self.selected_tile = None
+    self.redraw_level()
+   
   def on_button_set_size_click(self):
     try:
       new_height = int(self.text_widgets["height"].get("1.0",END)) * Editor.TILE_SIZE
@@ -211,8 +230,8 @@ class Editor(Frame):
     
     self.current_row = 0
     
-    self.add_button("save file")
-    self.add_button("load file")
+    self.add_button("save file",self.on_save_file_clicked)
+    self.add_button("load file",self.on_load_file_clicked)
     self.add_name_value_input("width")
     self.add_name_value_input("height")
     self.add_button("set size")
