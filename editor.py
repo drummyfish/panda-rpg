@@ -21,6 +21,20 @@ class Editor(Frame):
     except Exception:
       print("error: wrong size")
      
+  def on_set_tile_click(self):
+    if self.selected_tile == None:
+      return
+    
+    tile = self.level.get_tile(self.selected_tile[0],self.selected_tile[1])
+    tile.wall = self.get_check("is wall")
+    tile.ceiling = self.get_check("has ceiling")
+    tile.wall_model.model_name = self.get_text("wall model")
+    
+    tile.floor_model.model_name = self.get_text("floor model")
+    tile.ceiling_model.model_name = self.get_text("ceiling model")
+    
+    self.redraw_level()
+     
   def on_canvas_click(self, event):
     self.selected_tile = self.pixel_to_tile_coordinates(event.x,event.y)
     self.redraw_level()
@@ -36,6 +50,19 @@ class Editor(Frame):
   def set_text(self, name, text):
     self.text_widgets[name].delete("1.0",END)
     self.text_widgets[name].insert("1.0",text)
+    
+  def get_text(self, name):
+    return self.text_widgets[name].get("1.0",END).replace("\n","")
+    
+  ## Sets checkbox value of checkbox of given name.
+    
+  def set_check(self, name, bool_value):
+    self.checkbox_widgets[name].value.set(bool_value == True)
+    
+  ## Gets a bool value of a checkbox of given name.
+    
+  def get_check(self, name):
+    return self.checkbox_widgets[name].value.get() == True
     
   def list_to_string(self, input_list):
     result = ""
@@ -68,6 +95,8 @@ class Editor(Frame):
       self.set_text("ceiling textures",self.list_to_string(tile.ceiling_model.texture_names))
       self.set_text("ceiling height",str(tile.ceiling_height))
       self.set_text("orientation",str(tile.floor_orientation))
+      self.set_check("is wall",tile.wall)
+      self.set_check("has ceiling",tile.ceiling)
     else:
       self.set_text("wall model","")
       self.set_text("wall textures","")
@@ -77,6 +106,8 @@ class Editor(Frame):
       self.set_text("ceiling textures","")
       self.set_text("ceiling height","")
       self.set_text("orientation","")
+      self.set_check("is wall",False)
+      self.set_check("has ceiling",False)
       
   def pixel_to_tile_coordinates(self, x, y):
     return (int(math.floor(x / Editor.TILE_SIZE)),int(math.floor(y / Editor.TILE_SIZE)))
@@ -123,7 +154,7 @@ class Editor(Frame):
         else:
           self.canvas.create_rectangle(corner1[0], corner1[1], corner2[0], corner2[1], outline=fill_color, fill=fill_color)
 
-        if tile.ceiling:
+        if tile.ceiling and self.get_check("display ceiling"):
           self.canvas.create_rectangle(corner1[0] + small_tile_offset, corner1[1] + small_tile_offset, corner2[0] - + small_tile_offset, corner2[1] - + small_tile_offset, outline=ceiling_color, fill=ceiling_color)
 
   ## Adds given widget to given place in grid layout.
@@ -146,17 +177,22 @@ class Editor(Frame):
     
     self.current_row += 1
     
-  def add_name_check_input(self, name):
+  def add_name_check_input(self, name, checked=False, command=None):
     self.label_widgets[name] = Label(self, text=name)
     self.add_widget(self.label_widgets[name],self.current_row,0)
     
-    self.checkbox_widgets[name] = Checkbutton(self)
+    value = IntVar()
+    
+    self.checkbox_widgets[name] = Checkbutton(self,variable=value,command=command)
+    self.checkbox_widgets[name].value = value
     self.add_widget(self.checkbox_widgets[name],self.current_row,1)
+    
+    self.set_check(name,checked)
     
     self.current_row += 1
      
-  def add_button(self, name):
-    self.button_widgets[name] = Button(self, text=name)
+  def add_button(self, name, command=None):
+    self.button_widgets[name] = Button(self,text=name,command=command)
     self.add_widget(self.button_widgets[name],self.current_row,0,2,1,True)
     
     self.current_row += 1
@@ -190,12 +226,12 @@ class Editor(Frame):
     self.add_name_value_input("orientation")
     self.add_name_check_input("is wall")
     self.add_name_check_input("has ceiling")
-    self.add_button("set tile")
-    self.add_name_check_input("display texture")
-    self.add_name_check_input("display model")
-    self.add_name_check_input("display ceiling")
-    self.add_name_check_input("display ceiling height")
-    self.add_name_check_input("display orientation")
+    self.add_button("set tile",self.on_set_tile_click)
+    self.add_name_check_input("display texture",True,self.redraw_level)
+    self.add_name_check_input("display model",True,self.redraw_level)
+    self.add_name_check_input("display ceiling",True,self.redraw_level)
+    self.add_name_check_input("display ceiling height",True,self.redraw_level)
+    self.add_name_check_input("display orientation",True,self.redraw_level)
     
     self.canvas = Canvas(self, width=200, height=100, background="white", borderwidth=2, relief=SUNKEN)
     self.add_widget(self.canvas,0,2,1,self.current_row + 1)
@@ -205,7 +241,7 @@ class Editor(Frame):
     
     self.selected_tile = (0,0)
     
-    self.level = make_test_level()
+    self.level = Level(30,35) #make_test_level()
     self.redraw_level()
     
 def main():

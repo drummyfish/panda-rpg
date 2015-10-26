@@ -39,7 +39,10 @@ class Level:
 
     for i in range(len(self.layout)):
       for j in range(len(self.layout[0])):
-        self.layout[i][j] = default_tile
+        if default_tile == None:
+          self.layout[i][j] = LevelTile()
+        else:
+          self.layout[i][j] = default_tile
 
   def add_prop(self, prop):
     self.props.append(prop)
