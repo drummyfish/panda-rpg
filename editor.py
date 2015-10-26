@@ -21,29 +21,27 @@ class Editor(Frame):
     except Exception:
       print("error: wrong size")
      
-  def on_set_tile_click(self):
-    if self.selected_tile == None:
-      return
-    
-    tile = self.level.get_tile(self.selected_tile[0],self.selected_tile[1])
-    tile.wall = self.get_check("is wall")
-    tile.ceiling = self.get_check("has ceiling")
-    tile.wall_model.model_name = self.get_text("wall model")
-    
-    tile.floor_model.model_name = self.get_text("floor model")
-    tile.ceiling_model.model_name = self.get_text("ceiling model")
-    
-    self.redraw_level()
-     
   def on_canvas_click(self, event):
     self.selected_tile = self.pixel_to_tile_coordinates(event.x,event.y)
     self.redraw_level()
     self.update_gui_info()
 
-  def on_canvas_click2(self, event):   # right click
-    self.selected_tile = None
-    self.redraw_level()
-    self.update_gui_info()
+  def on_canvas_click2(self, event):   # right click 
+    try:
+      clicked_tile = self.pixel_to_tile_coordinates(event.x,event.y)
+      tile = self.level.get_tile(clicked_tile[0],clicked_tile[1])
+      tile.wall = self.get_check("is wall")
+      tile.ceiling = self.get_check("has ceiling")
+      tile.wall_model.model_name = self.get_text("wall model")
+      tile.wall_model.texture_names = self.string_to_list(self.get_text("wall textures"))
+      tile.floor_model.texture_names = self.string_to_list(self.get_text("floor textures"))
+      tile.ceiling_model.texture_names = self.string_to_list(self.get_text("ceiling textures"))
+      tile.floor_model.model_name = self.get_text("floor model")
+      tile.ceiling_model.model_name = self.get_text("ceiling model")
+      tile.floor_orientation = int(self.get_text("orientation"))
+      self.redraw_level()
+    except Exception:
+      print("error: wrong value")
     
   ## Sets text in given text widget (of given name).
     
@@ -78,6 +76,9 @@ class Editor(Frame):
       result += item
     
     return result
+    
+  def string_to_list(self, input_string):
+    return input_string.split(";")
     
   ## Updates the info in GUI, i.e. selected tile information etc.
     
@@ -215,7 +216,6 @@ class Editor(Frame):
     self.add_name_value_input("width")
     self.add_name_value_input("height")
     self.add_button("set size")
-    self.add_name_check_input("draw mode")
     self.add_name_value_input("wall model")
     self.add_name_value_input("wall textures")
     self.add_name_value_input("floor model")
@@ -226,7 +226,6 @@ class Editor(Frame):
     self.add_name_value_input("orientation")
     self.add_name_check_input("is wall")
     self.add_name_check_input("has ceiling")
-    self.add_button("set tile",self.on_set_tile_click)
     self.add_name_check_input("display texture",True,self.redraw_level)
     self.add_name_check_input("display model",True,self.redraw_level)
     self.add_name_check_input("display ceiling",True,self.redraw_level)

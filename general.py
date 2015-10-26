@@ -3,23 +3,41 @@ RESOURCE_PATH = "resources/"
 ## Represents a model that has either static or animated frame animated texture.
 
 class AnimatedTextureModel:
-  def __init__(self):
-    self.model_name = ""
-    self.texture_names = []
-    self.framerate = 1.0
+  def __init__(self, animated_texture_model=None):
+    if animated_texture_model == None:
+      self.model_name = ""
+      self.texture_names = []
+      self.framerate = 1.0
+    else:
+      self.model_name = animated_texture_model.model_name
+      self.framerate = animated_texture_model.framerate
+    
+      self.texture_names = []
+
+      for texture_name in animated_texture_model.texture_names:
+        self.texture_names.append(texture_name)
 
 ## Represents one level tile.
 
 class LevelTile:
-  def __init__(self):
-    self.wall = False                                ##< whether the tile is a wall (True) or floor (False)
-    self.ceiling = False                             ##< whether the tile has a ceiling (ceiling can also be above walls)
-    self.ceiling_height = 1
-    self.floor_orientation = 0                       ##< rotation of the floor, possible values: 0, 1, 2, 3
-    self.wall_model = AnimatedTextureModel()         ##< model for wall 
-    self.floor_model = AnimatedTextureModel()        ##< model for floor
-    self.ceiling_model = AnimatedTextureModel()      ##< model for ceiling
-
+  def __init__(self, level_tile=None):
+    if level_tile == None:
+      self.wall = False                                ##< whether the tile is a wall (True) or floor (False)
+      self.ceiling = False                             ##< whether the tile has a ceiling (ceiling can also be above walls)
+      self.ceiling_height = 1
+      self.floor_orientation = 0                       ##< rotation of the floor, possible values: 0, 1, 2, 3
+      self.wall_model = AnimatedTextureModel()         ##< model for wall 
+      self.floor_model = AnimatedTextureModel()        ##< model for floor
+      self.ceiling_model = AnimatedTextureModel()      ##< model for ceiling
+    else:                                              # make deep copy
+      self.wall = level_tile.wall
+      self.ceiling = level_tile.ceiling
+      self.ceiling_height = level_tile.ceiling_height
+      self.floor_orientation = level_tile.floor_orientation
+      self.wall_model = AnimatedTextureModel(level_tile.wall_model) 
+      self.floor_model = AnimatedTextureModel(level_tile.floor_model)        
+      self.ceiling_model = AnimatedTextureModel(level_tile.ceiling_model)      
+    
 ## Represents a level prop, for example a column. Prop has its position and orientation
 #  but doesnt affect anything in the game and has no colissions.
 
