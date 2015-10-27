@@ -70,7 +70,7 @@ class Level:
     self.layout = [[None for i in range(height)] for j in range(width)]
     self.width = width
     self.height = height
-    self.skybox_texture = ""
+    self.skybox_textures = []
     self.props = []
 
     for i in range(len(self.layout)):
@@ -92,11 +92,19 @@ class Level:
   def get_height(self):
     return self.height
   
-  def set_skybox_texture(self, texture_name):
-    self.skybox_texture = texture_name
+  ## Sets the names of skybox textures used for different
+  #  times of day.
+  #
+  #  @param texture_names list of texture names, the textures
+  #         will be chenged between depending on the time of day
+  
+  def set_skybox_textures(self, texture_names):
+    self.skybox_textures = texture_names
     
-  def get_skybox_texture(self):
-    return self.skybox_texture
+  ## Gets the list of skybox texture names.
+    
+  def get_skybox_textures(self):
+    return self.skybox_textures
 
   def get_tile(self, x, y):
     return self.layout[x][y]
@@ -116,38 +124,38 @@ class Level:
 def make_test_level():               # DELETE THIS LATER
   floor_tile = LevelTile()
   floor_tile.wall = False
-  floor_tile.floor_model.model_name = RESOURCE_PATH + "floor_flat.obj"
-  floor_tile.floor_model.texture_names.append(RESOURCE_PATH + "grass.png")
+  floor_tile.floor_model.model_name = "floor_flat.obj"
+  floor_tile.floor_model.texture_names.append("grass.png")
   
   floor_tile2 = LevelTile()
   floor_tile2.wall = False
   floor_tile2.ceiling = True
-  floor_tile2.floor_model.model_name = RESOURCE_PATH + "floor_flat.obj"
-  floor_tile2.floor_model.texture_names.append(RESOURCE_PATH + "grass.png")
-  floor_tile2.ceiling_model.model_name = RESOURCE_PATH + "ceiling_flat.obj"
-  floor_tile2.ceiling_model.texture_names.append(RESOURCE_PATH + "t1.jpg")
+  floor_tile2.floor_model.model_name = "floor_flat.obj"
+  floor_tile2.floor_model.texture_names.append("grass.png")
+  floor_tile2.ceiling_model.model_name = "ceiling_flat.obj"
+  floor_tile2.ceiling_model.texture_names.append("t1.jpg")
     
   floor_tile3 = LevelTile()
   floor_tile3.wall = False
-  floor_tile3.floor_model.model_name = RESOURCE_PATH + "floor_flat.obj"
-  floor_tile3.floor_model.texture_names.append(RESOURCE_PATH + "grass.png")
+  floor_tile3.floor_model.model_name = "floor_flat.obj"
+  floor_tile3.floor_model.texture_names.append("grass.png")
   floor_tile3.floor_orientation = 1
     
   wall_tile = LevelTile()
   wall_tile.wall = True
-  wall_tile.wall_model.model_name = RESOURCE_PATH + "wall_flat.obj"
-  wall_tile.wall_model.texture_names.append(RESOURCE_PATH + "wall.png")
-  wall_tile.wall_model.texture_names.append(RESOURCE_PATH + "grass.png")
-  wall_tile.wall_model.texture_names.append(RESOURCE_PATH + "t2.jpg")
+  wall_tile.wall_model.model_name = "wall_flat.obj"
+  wall_tile.wall_model.texture_names.append("wall.png")
+  wall_tile.wall_model.texture_names.append("grass.png")
+  wall_tile.wall_model.texture_names.append("t2.jpg")
   wall_tile.wall_model.framerate = 10
     
   wall_tile2 = LevelTile()
   wall_tile2.wall = True
-  wall_tile2.wall_model.model_name = RESOURCE_PATH + "wall_bulwark.obj"
-  wall_tile2.wall_model.texture_names.append(RESOURCE_PATH + "wall.png")
+  wall_tile2.wall_model.model_name = "wall_bulwark.obj"
+  wall_tile2.wall_model.texture_names.append("wall.png")
     
   level = Level(40,30,floor_tile)
-  level.set_skybox_texture(RESOURCE_PATH + "skybox.png")
+  level.set_skybox_textures(["skybox.png","skybox2.png","skybox3.jpg"])
  
   i_plus = 10
   j_plus = 7
@@ -181,8 +189,8 @@ def make_test_level():               # DELETE THIS LATER
   column1 = LevelProp()
   column1.position[0] = 0.5
   column1.position[1] = 0.5
-  column1.model.model_name = RESOURCE_PATH + "column_test.obj"
-  column1.model.texture_names.append(RESOURCE_PATH + "wall.png")
+  column1.model.model_name = "column_test.obj"
+  column1.model.texture_names.append("wall.png")
   
   level.add_prop(column1)
 

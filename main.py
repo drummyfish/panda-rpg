@@ -11,7 +11,7 @@ class MyApp(ShowBase, DirectObject.DirectObject):
   def __init__(self):
     ShowBase.__init__(self)
 
-    self.setup_environment_scene(make_test_level())
+    self.daytime = 0.0           ##< time of day in range <0,1>
 
     base.setFrameRateMeter(True)
 
@@ -23,8 +23,9 @@ class MyApp(ShowBase, DirectObject.DirectObject):
 
     base.disableMouse()
 
-    self.taskMgr.add(self.camera_task, "camera_task")
-    self.taskMgr.add(self.mouse_position_task, "mouse_position_task")
+    self.taskMgr.add(self.camera_task,"camera_task")
+    self.taskMgr.add(self.mouse_position_task,"mouse_position_task")
+    self.taskMgr.add(self.time_task,"time_task")
 
     self.input_state = {}   # contains state of mouse and keyboard
 
@@ -35,6 +36,8 @@ class MyApp(ShowBase, DirectObject.DirectObject):
       self.input_state[key] = False
       self.accept(key,self.handle_input,[key,True])
       self.accept(key + "-up",self.handle_input,[key,False])
+
+    self.setup_environment_scene(make_test_level())
 
   def handle_input(self,input_name,input_value):
     self.input_state[input_name] = input_value
@@ -49,6 +52,11 @@ class MyApp(ShowBase, DirectObject.DirectObject):
 
     return task.cont
 
+  def time_task(self, task):
+    self.daytime = (task.time / 20) % 1
+    self.set_daytime(self.daytime)
+    return task.cont
+  
   def camera_task(self, task):
     current_position = self.camera.getPos()
 
@@ -99,6 +107,33 @@ class MyApp(ShowBase, DirectObject.DirectObject):
 
     return task.cont
 
+  ## Sets the time of the day as a value in interval <0,1> to affect the scene (lighting, skybox texture, ...).
+
+  def set_daytime(self, daytime):
+    skybox_node = self.render.find("**/skybox")
+    
+    if skybox_node.isEmpty():
+      return
+    
+    texture_index = int(len(self.skybox_textures) * self.daytime)
+    fraction = 1.0 / len(self.skybox_textures)
+    remainder = self.daytime - fraction * texture_index
+    ratio = remainder / fraction
+    
+    transition_range = 0.2
+    remaining_range = (1.0 - transition_range) / 2.0
+    
+    if ratio < remaining_range:
+      ratio = 0.0
+    elif ratio < 1.0 - remaining_range:
+      ratio = (ratio - remaining_range) / transition_range
+    else:
+      ratio = 1.0
+    
+    skybox_node.setTexture(self.skybox_texture_stage1,self.skybox_textures[texture_index])
+    skybox_node.setTexture(self.skybox_texture_stage2,self.skybox_textures[(texture_index + 1) % len(self.skybox_textures)])
+    self.skybox_texture_stage2.setColor(Vec4(ratio,ratio,ratio,ratio))
+
   ## Sets up 3D environment node based on provided level layout.
 
   def setup_environment_scene(self, level):
@@ -107,11 +142,11 @@ class MyApp(ShowBase, DirectObject.DirectObject):
     
     def load_model(model_name):                # loads model into 'models' cache (only if it hasn't been loaded laready)
       if not model_name in models:
-        models[model_name] = self.loader.loadModel(model_name)
+        models[model_name] = self.loader.loadModel(RESOURCE_PATH + model_name)
     
     def load_texture(texture_name):            # loads texture into 'textures' cache (only if it hasn't been loaded laready)
       if not texture_name in textures:
-        textures[texture_name] = self.loader.loadTexture(texture_name)
+        textures[texture_name] = self.loader.loadTexture(RESOURCE_PATH + texture_name)
         textures[texture_name].setMinfilter(Texture.FTNearestMipmapLinear)
 
     def make_node(animated_texture_model):     # makes a node out of AnimatedTextureModel object, handles loading models and textures and caches
@@ -165,18 +200,6 @@ class MyApp(ShowBase, DirectObject.DirectObject):
     level_node_path.reparentTo(self.render)
     level_node_path.setFog(fog)
     
-    skybox = self.loader.loadModel(RESOURCE_PATH + "skybox.obj")
-    skybox.reparentTo(self.camera)
-    skybox.setHpr(0,90,0)
-    skybox.set_bin("background", 0);
-    skybox.set_depth_write(False);
-    skybox.set_compass()
-    skybox.setTexture(self.loader.loadTexture(level.get_skybox_texture()))
-    
-    skybox_material = Material()
-    skybox_material.setEmission((1, 1, 1, 1))
-    skybox.setMaterial(skybox_material)
-    
     for j in range(level.get_height()):
       for i in range(level.get_width()):
 
@@ -209,6 +232,40 @@ class MyApp(ShowBase, DirectObject.DirectObject):
       tile_node_path.setPos(prop.position[0] - half_width,0,prop.position[1] - half_height)
       tile_node_path.setHpr(prop.orientation,0,0)
 
+    skybox = self.loader.loadModel(RESOURCE_PATH + "skybox.obj")
+    skybox.setName("skybox")
+    skybox.reparentTo(self.camera)
+    skybox.setHpr(0,90,0)
+    skybox.set_bin("background", 0);
+    skybox.set_depth_write(False);
+    skybox.set_compass()
+    skybox_material = Material()
+    skybox_material.setEmission((1, 1, 1, 1))
+    skybox.setMaterial(skybox_material)
+  
+    self.skybox_texture_stage1 = TextureStage("ts0")
+    self.skybox_texture_stage2 = TextureStage("ts2")
+    self.skybox_texture_stage2.setCombineRgb(TextureStage.CMInterpolate,TextureStage.CSTexture,TextureStage.COSrcColor,TextureStage.CSPrevious,TextureStage.COSrcColor,TextureStage.CSConstant,TextureStage.COSrcColor)
+    self.skybox_texture_stage2.setColor(Vec4(0.5,0.5,0.5,0.5))
+    self.skybox_textures = []
+    
+    skybox_texture_names = level.get_skybox_textures()
+    
+    for skybox_texture_name in skybox_texture_names:
+      load_texture(skybox_texture_name)
+      self.skybox_textures.append(textures[skybox_texture_name])
+  
+ #   ts1 = TextureStage("ts1")
+    #ts1.setMode(TextureStage.MBlend)
+    #ts1.setMode(TextureStage.MDecal)
+ #   ts1.setCombineRgb(TextureStage.CMInterpolate,TextureStage.CSTexture,TextureStage.COSrcColor,TextureStage.CSPrevious,TextureStage.COSrcColor,TextureStage.CSConstant,TextureStage.COSrcColor)
+    #ts1.setCombineAlpha(TextureStage.CMInterpolate,TextureStage.CSTexture,TextureStage.COSrcAlpha,TextureStage.CSPrevious,TextureStage.COSrcAlpha,TextureStage.CSConstant,TextureStage.COSrcAlpha)
+ #   ts1.setColor(Vec4(0.5,0.5,0.5,0.5))
+    
+  #  load_texture("skybox2.png")
+    
+  #  skybox.setTexture(ts1,textures["skybox2.png"])
+
     level_node_path.setTransparency(True)
     level_node_path.reparentTo(self.render)
     level_node_path.setPos(-4, 10, -0.5)
@@ -224,6 +281,8 @@ class MyApp(ShowBase, DirectObject.DirectObject):
     point_light_path.setHpr(10, -45, 0)
     point_light_path.setPos(-4, 10, 2)
     render.setLight(point_light_path)
+
+    self.set_daytime(0.5)
 
 app = MyApp()
 app.run()
