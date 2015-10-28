@@ -8,10 +8,13 @@ from direct.showbase import DirectObject
 from general import *
 
 class MyApp(ShowBase, DirectObject.DirectObject):
+  DAYTIME_UPDATE_COUNTER = 2
+  
   def __init__(self):
     ShowBase.__init__(self)
 
-    self.daytime = 0.0           ##< time of day in range <0,1>
+    self.daytime = 0.0                                              ##< time of day in range <0,1>
+    self.update_daytime_counter = MyApp.DAYTIME_UPDATE_COUNTER      ##< counts frames to update daytime effects to increase FPS
 
     base.setFrameRateMeter(True)
 
@@ -53,7 +56,14 @@ class MyApp(ShowBase, DirectObject.DirectObject):
     return task.cont
 
   def time_task(self, task):
-    self.daytime = (task.time / 20) % 1
+    self.daytime = (task.time / 10) % 1
+    
+    if self.update_daytime_counter > 0:
+      self.update_daytime_counter -= 1
+      return task.cont
+    else:
+      self.update_daytime_counter = MyApp.DAYTIME_UPDATE_COUNTER
+    
     self.set_daytime(self.daytime)
     return task.cont
   
@@ -133,6 +143,30 @@ class MyApp(ShowBase, DirectObject.DirectObject):
     skybox_node.setTexture(self.skybox_texture_stage1,self.skybox_textures[texture_index])
     skybox_node.setTexture(self.skybox_texture_stage2,self.skybox_textures[(texture_index + 1) % len(self.skybox_textures)])
     self.skybox_texture_stage2.setColor(Vec4(ratio,ratio,ratio,ratio))
+    
+    # set diffuse light:
+    
+    diffuse_light_node = self.render.find("**/diffuse")
+    ambient_light_node = self.render.find("**/ambient")
+    
+    if diffuse_light_node.isEmpty() or ambient_light_node.isEmpty():
+      return
+    
+    light_index = int(len(self.diffuse_lights) * self.daytime)
+    fraction = 1.0 / len(self.diffuse_lights)
+    remainder = self.daytime - fraction * light_index
+    ratio = remainder / fraction
+    one_minus_ratio = 1.0 - ratio
+    
+    color1 = self.diffuse_lights[light_index]
+    color2 = self.diffuse_lights[(light_index + 1) % len(self.diffuse_lights)]
+
+    light_color = (color1[0] * one_minus_ratio + color2[0] * ratio,color1[1] * one_minus_ratio + color2[1] * ratio,color1[2] * one_minus_ratio + color2[2] * ratio)
+    
+    diffuse_light_node.node().setColor(VBase4(light_color[0],light_color[1],light_color[2],1))
+
+    ambient_color = (light_color[0] * self.ambient_light_amount, light_color[1] * self.ambient_light_amount, light_color[2] * self.ambient_light_amount)
+    ambient_light_node.node().setColor(VBase4(ambient_color[0],ambient_color[1],ambient_color[2],1))
 
   ## Sets up 3D environment node based on provided level layout.
 
@@ -192,7 +226,8 @@ class MyApp(ShowBase, DirectObject.DirectObject):
     half_height = level.get_height() / 2.0 
     
     fog = Fog("fog")
-    fog.setColor(0.3,0.3,0.3)
+    fog_color = level.get_fog_color()
+    fog.setColor(fog_color[0],fog_color[1],fog_color[2])
     fog.setExpDensity(0.1)
     fog.setLinearRange(10,20)
     
@@ -254,33 +289,28 @@ class MyApp(ShowBase, DirectObject.DirectObject):
     for skybox_texture_name in skybox_texture_names:
       load_texture(skybox_texture_name)
       self.skybox_textures.append(textures[skybox_texture_name])
-  
- #   ts1 = TextureStage("ts1")
-    #ts1.setMode(TextureStage.MBlend)
-    #ts1.setMode(TextureStage.MDecal)
- #   ts1.setCombineRgb(TextureStage.CMInterpolate,TextureStage.CSTexture,TextureStage.COSrcColor,TextureStage.CSPrevious,TextureStage.COSrcColor,TextureStage.CSConstant,TextureStage.COSrcColor)
-    #ts1.setCombineAlpha(TextureStage.CMInterpolate,TextureStage.CSTexture,TextureStage.COSrcAlpha,TextureStage.CSPrevious,TextureStage.COSrcAlpha,TextureStage.CSConstant,TextureStage.COSrcAlpha)
- #   ts1.setColor(Vec4(0.5,0.5,0.5,0.5))
-    
-  #  load_texture("skybox2.png")
-    
-  #  skybox.setTexture(ts1,textures["skybox2.png"])
 
     level_node_path.setTransparency(True)
     level_node_path.reparentTo(self.render)
     level_node_path.setPos(-4, 10, -0.5)
     level_node_path.setHpr(0, 90, 0)
 
-    ambient_light = AmbientLight('alight')
+    # manage lights:
+
+    ambient_light = AmbientLight('ambient')
     ambient_light_path = render.attachNewNode(ambient_light) 
-    ambient_light.setColor(VBase4(0.5, 0.5, 0.5, 1))
+    ambient_light.setColor(VBase4(level.get_ambient_light_amount(),level.get_ambient_light_amount(),level.get_ambient_light_amount(),1))
     render.setLight(ambient_light_path)
     
-    point_light = DirectionalLight('plight')
-    point_light_path = render.attachNewNode(point_light)
-    point_light_path.setHpr(10, -45, 0)
-    point_light_path.setPos(-4, 10, 2)
-    render.setLight(point_light_path)
+    directional_light = DirectionalLight('diffuse')
+    directional_light_path = render.attachNewNode(directional_light)
+    directional_light.setColor(VBase4(0.7,0.7,0.7,1))
+    directional_light_path.setHpr(10, -45, 0)
+    directional_light_path.setPos(-4, 10, 1)
+    render.setLight(directional_light_path)
+
+    self.diffuse_lights = level.get_diffuse_lights()
+    self.ambient_light_amount = level.get_ambient_light_amount()
 
     self.set_daytime(0.5)
 

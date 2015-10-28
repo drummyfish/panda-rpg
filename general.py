@@ -70,7 +70,10 @@ class Level:
     self.layout = [[None for i in range(height)] for j in range(width)]
     self.width = width
     self.height = height
-    self.skybox_textures = []
+    self.skybox_textures = []              ##< contains names of skybox textures that are being chained between during daytime
+    self.ambient_light_amount = 0.5        ##< amount of ambient light in range <0,1>
+    self.fog_color = (0.5,0.5,0.5)         ##< fog color
+    self.diffuse_lights = [(1.0,1.0,1.0)]  ##< list of light colors (3-item tuples tuples) that are interpolated between during daytime
     self.props = []
 
     for i in range(len(self.layout)):
@@ -91,6 +94,27 @@ class Level:
 
   def get_height(self):
     return self.height
+  
+  ## Sets the lighting properties of the level.
+  #
+  #  @param ambient_light_amount amount of ambient light in range <0,1>
+  #  @param diffuse_lights list of light colors (3-item tuples tuples) that are interpolated between during daytime
+  
+  def set_light_properties(self,ambient_light_amount, diffuse_lights):
+    self.ambient_light_amount = ambient_light_amount
+    self.diffuse_lights = diffuse_lights
+    
+  def get_ambient_light_amount(self):
+    return self.ambient_light_amount
+  
+  def get_diffuse_lights(self):
+    return self.diffuse_lights
+  
+  def set_fog_color(self, fog_color):
+    self.fog_color = fog_color
+    
+  def get_fog_color(self):
+    return self.fog_color
   
   ## Sets the names of skybox textures used for different
   #  times of day.
@@ -193,5 +217,7 @@ def make_test_level():               # DELETE THIS LATER
   column1.model.texture_names.append("wall.png")
   
   level.add_prop(column1)
+
+  level.set_light_properties(0.6,[(1,1,1),(0.4,0.4,0.4),(1.0,0.4,0.4)])
 
   return level
