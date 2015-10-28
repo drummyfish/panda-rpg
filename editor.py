@@ -33,12 +33,8 @@ class Editor(Frame):
     self.selected_tile = None
     self.redraw_level()
    
-  def on_button_set_size_click(self):
-    try:
-      new_height = int(self.text_widgets["height"].get("1.0",END)) * Editor.TILE_SIZE
-      new_width = int(self.text_widgets["width"].get("1.0",END)) * Editor.TILE_SIZE
-    except Exception:
-      print("error: wrong size")
+  def on_set_map_info_click(self):
+    self.level.set_name(self.get_text("name"))
      
   def on_canvas_click(self, event):
     self.selected_tile = self.pixel_to_tile_coordinates(event.x,event.y)
@@ -107,6 +103,7 @@ class Editor(Frame):
     
     if self.selected_tile != None:
       tile = self.level.get_tile(self.selected_tile[0],self.selected_tile[1])
+      self.set_text("name",self.level.get_name())
       self.set_text("wall model",tile.wall_model.model_name)
       self.set_text("wall textures",self.list_to_string(tile.wall_model.texture_names))
       self.set_text("floor model",tile.floor_model.model_name)
@@ -118,6 +115,7 @@ class Editor(Frame):
       self.set_check("is wall",tile.wall)
       self.set_check("has ceiling",tile.ceiling)
     else:
+      self.set_text("name","")
       self.set_text("wall model","")
       self.set_text("wall textures","")
       self.set_text("floor model","")
@@ -153,6 +151,8 @@ class Editor(Frame):
     
     small_tile_offset = math.floor((Editor.TILE_SIZE - Editor.SMALL_TILE_SIZE) / 2)
     
+    half_tile_size = Editor.TILE_SIZE / 2
+    
     for y in range(self.level.get_height()):
       for x in range(self.level.get_width()):
         corner1 = (x * Editor.TILE_SIZE, y * Editor.TILE_SIZE)
@@ -166,16 +166,35 @@ class Editor(Frame):
           fill_color = self.compute_model_color(self.level.get_tile(x,y).floor_model)
         
         ceiling_color = self.compute_model_color(self.level.get_tile(x,y).ceiling_model)
-        
-        if self.selected_tile != None and self.selected_tile[0] == x and self.selected_tile[1] == y:
-          self.canvas.create_rectangle(corner1[0], corner1[1], corner2[0], corner2[1], outline="red", fill=fill_color)   
-        elif tile.wall:
+           
+        if tile.wall:       # wall
           self.canvas.create_rectangle(corner1[0], corner1[1], corner2[0], corner2[1], outline="black", fill=fill_color)
-        else:
+        else:               # floor
           self.canvas.create_rectangle(corner1[0], corner1[1], corner2[0], corner2[1], outline=fill_color, fill=fill_color)
+
+          if self.get_check("display orientation"):
+            if tile.floor_orientation == 0:
+              p1 = (corner1[0] + 1,corner2[1] - 1)
+              p2 = (corner2[0] + 1,corner2[1] - 1)
+            elif tile.floor_orientation == 1:
+              p1 = (corner1[0] + 1,corner1[1] - 1)
+              p2 = (corner1[0] + 1,corner2[1] - 1)
+            elif tile.floor_orientation == 2:
+              p1 = (corner1[0] + 1,corner1[1] - 1)
+              p2 = (corner2[0] + 1,corner1[1] - 1)
+            else:
+              p1 = (corner2[0] + 1,corner1[1] - 1)
+              p2 = (corner2[0] + 1,corner2[1] - 1)
+              
+            p3 = (corner1[0] + half_tile_size,corner1[1] + half_tile_size)
+            
+            self.canvas.create_polygon(p1[0],p1[1],p2[0],p2[1],p3[0],p3[1],outline="white",fill="green")
 
         if tile.ceiling and self.get_check("display ceiling"):
           self.canvas.create_rectangle(corner1[0] + small_tile_offset, corner1[1] + small_tile_offset, corner2[0] - + small_tile_offset, corner2[1] - + small_tile_offset, outline=ceiling_color, fill=ceiling_color)
+
+        if self.selected_tile != None and self.selected_tile[0] == x and self.selected_tile[1] == y:
+          self.canvas.create_rectangle(corner1[0], corner1[1], corner2[0], corner2[1], outline="red")
 
   ## Adds given widget to given place in grid layout.
 
@@ -232,9 +251,13 @@ class Editor(Frame):
     
     self.add_button("save file",self.on_save_file_clicked)
     self.add_button("load file",self.on_load_file_clicked)
+    self.add_name_value_input("name")
+    self.add_name_value_input("skybox textures")
+    self.add_name_value_input("daytime colors")
+    self.add_name_value_input("ambient light amount")
     self.add_name_value_input("width")
     self.add_name_value_input("height")
-    self.add_button("set size")
+    self.add_button("set map info",self.on_set_map_info_click)
     self.add_name_value_input("wall model")
     self.add_name_value_input("wall textures")
     self.add_name_value_input("floor model")

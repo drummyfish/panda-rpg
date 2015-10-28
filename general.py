@@ -75,6 +75,7 @@ class Level:
     self.fog_color = (0.5,0.5,0.5)         ##< fog color
     self.diffuse_lights = [(1.0,1.0,1.0)]  ##< list of light colors (3-item tuples tuples) that are interpolated between during daytime
     self.props = []
+    self.name = ""                         ##< level name
 
     for i in range(len(self.layout)):
       for j in range(len(self.layout[0])):
@@ -82,6 +83,12 @@ class Level:
           self.layout[i][j] = LevelTile()
         else:
           self.layout[i][j] = default_tile
+
+  ## Resizes the map.
+
+  def set_size(self, new_width, new_height):
+    # todo
+    return
 
   def add_prop(self, prop):
     self.props.append(prop)
@@ -91,6 +98,12 @@ class Level:
 
   def get_width(self):
     return self.width
+
+  def set_name(self, name):
+    self.name = name
+    
+  def get_name(self):
+    return self.name
 
   def get_height(self):
     return self.height
