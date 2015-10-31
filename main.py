@@ -40,7 +40,7 @@ class MyApp(ShowBase, DirectObject.DirectObject):
       self.accept(key,self.handle_input,[key,True])
       self.accept(key + "-up",self.handle_input,[key,False])
 
-    self.setup_environment_scene(make_test_level())
+    self.setup_environment_scene(Level.load_from_file(Level(1,1),"test_output.txt"))
 
   def handle_input(self,input_name,input_value):
     self.input_state[input_name] = input_value
@@ -56,7 +56,7 @@ class MyApp(ShowBase, DirectObject.DirectObject):
     return task.cont
 
   def time_task(self, task):
-    self.daytime = (task.time / 10) % 1
+    self.daytime = (task.time / 3) % 1
     
     if self.update_daytime_counter > 0:
       self.update_daytime_counter -= 1

@@ -36,7 +36,6 @@ class Editor(Frame):
   def on_set_map_info_click(self):
     self.level.set_name(self.get_text("name"))
     self.level.set_skybox_textures(self.string_to_list(self.get_text("skybox textures")))
-    
     diffuse_lights = self.get_text("daytime colors").replace(" ", "").split(";")
    
     for i in range(len(diffuse_lights)):
@@ -117,6 +116,7 @@ class Editor(Frame):
       tile = self.level.get_tile(self.selected_tile[0],self.selected_tile[1])
       self.set_text("name",self.level.get_name())
       self.set_text("ambient light amount",str(self.level.get_ambient_light_amount()))
+      self.set_text("skybox textures",self.list_to_string(self.level.get_skybox_textures()))
       self.set_text("daytime colors",self.list_to_string(self.level.get_diffuse_lights()).replace(" ",""))
       self.set_text("fog color",self.color_to_string(self.level.get_fog_color()))
       self.set_text("wall model",tile.wall_model.model_name)
@@ -132,6 +132,7 @@ class Editor(Frame):
     else:
       self.set_text("name","")
       self.set_text("ambient light amount","")
+      self.set_text("skybox textures","")
       self.set_text("daytime colors","")
       self.set_text("fog color","")
       self.set_text("wall model","")
@@ -291,7 +292,7 @@ class Editor(Frame):
     self.add_name_check_input("display model",True,self.redraw_level)
     self.add_name_check_input("display ceiling",True,self.redraw_level)
     self.add_name_check_input("display ceiling height",True,self.redraw_level)
-    self.add_name_check_input("display orientation",True,self.redraw_level)
+    self.add_name_check_input("display orientation",False,self.redraw_level)
     
     self.canvas = Canvas(self, width=200, height=100, background="white", borderwidth=2, relief=SUNKEN)
     self.add_widget(self.canvas,0,2,1,self.current_row + 1)
