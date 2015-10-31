@@ -44,6 +44,10 @@ class Editor(Frame):
       
     self.level.set_light_properties(float(self.get_text("ambient light amount")),diffuse_lights)
     
+    self.level.set_size(int(self.get_text("width")),int(self.get_text("height")))
+    self.selected_tile = None
+    self.redraw_level()
+    
   def on_canvas_click(self, event):
     self.selected_tile = self.pixel_to_tile_coordinates(event.x,event.y)
     self.redraw_level()
@@ -275,6 +279,7 @@ class Editor(Frame):
     self.add_name_value_input("daytime colors")
     self.add_name_value_input("ambient light amount")
     self.add_name_value_input("fog color")
+    self.add_name_value_input("fog distance")
     self.add_name_value_input("width")
     self.add_name_value_input("height")
     self.add_button("set map info",self.on_set_map_info_click)
@@ -294,6 +299,15 @@ class Editor(Frame):
     self.add_name_check_input("display ceiling height",True,self.redraw_level)
     self.add_name_check_input("display orientation",False,self.redraw_level)
     
+    self.add_button("new prop")
+    self.add_button("delete prop")
+    self.add_button("set prop properties")
+    self.add_name_check_input("stick to grid",True,self.redraw_level)
+    self.add_name_value_input("prop position")
+    self.add_name_value_input("prop orientation")
+    self.add_name_value_input("prop model")
+    self.add_name_value_input("prop textures")
+    
     self.canvas = Canvas(self, width=200, height=100, background="white", borderwidth=2, relief=SUNKEN)
     self.add_widget(self.canvas,0,2,1,self.current_row + 1)
     
@@ -307,7 +321,7 @@ class Editor(Frame):
     
 def main():
   root = Tk()
-  root.geometry("1280x768")
+  root.geometry("1280x1100")
   app = Editor(root)
   root.mainloop()  
 

@@ -87,13 +87,25 @@ class Level:
         if default_tile == None:
           self.layout[i][j] = LevelTile()
         else:
-          self.layout[i][j] = default_tile
+          self.layout[i][j] = LevelTile(default_tile)
 
   ## Resizes the map.
 
   def set_size(self, new_width, new_height):
-    # todo
-    return
+    old_size = (self.get_width(),self.get_height())
+    old_layout = self.layout
+    
+    self.width = new_width
+    self.height = new_height
+    
+    self.layout = [[None for i in range(new_height)] for j in range(new_width)]
+    
+    for i in range(len(self.layout)):
+      for j in range(len(self.layout[0])):
+        try:
+          self.layout[i][j] = old_layout[i][j]
+        except Exception:
+          self.layout[i][j] = LevelTile()
 
   def add_prop(self, prop):
     self.props.append(prop)
