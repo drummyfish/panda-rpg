@@ -5,7 +5,7 @@ from direct.actor.Actor import Actor
 from panda3d.core import *
 from direct.showbase import DirectObject
 
-from general import *
+from level import *
 
 class MyApp(ShowBase, DirectObject.DirectObject):
   DAYTIME_UPDATE_COUNTER = 2
@@ -237,26 +237,27 @@ class MyApp(ShowBase, DirectObject.DirectObject):
     
     for j in range(level.get_height()):
       for i in range(level.get_width()):
+        tile = level.get_tile(i,j)
+        
+        if not tile.is_empty():
+          if not tile.wall:                            # floor tile
+            tile_node_path = level_node_path.attachNewNode(make_node(level.get_tile(i,j).floor_model))
+            tile_node_path.setPos(i - half_width,0,j - half_height)
+            tile_node_path.setHpr(0,0,level.get_tile(i,j).floor_orientation * 90)
+          else:                                                       # wall
+            offsets = [[0,0.5], [0.5,0], [-0.5,0], [0,-0.5]] # down, right, left, up
+            rotations = [-90, 0, 180, 90]
+            neighbours = [[0,1], [1,0], [-1,0], [0,-1]]
 
-        if not level.get_tile(i,j).wall:                            # floor tile
-          tile_node_path = level_node_path.attachNewNode(make_node(level.get_tile(i,j).floor_model))
-          tile_node_path.setPos(i - half_width,0,j - half_height)
-          tile_node_path.setHpr(0,0,level.get_tile(i,j).floor_orientation * 90)
-            
-        else:                                                       # wall
-          offsets = [[0,0.5], [0.5,0], [-0.5,0], [0,-0.5]] # down, right, left, up
-          rotations = [-90, 0, 180, 90]
-          neighbours = [[0,1], [1,0], [-1,0], [0,-1]]
+            for k in range(4):  # 4 walls (one for each direction)
+              # check if the wall needs to be created:
 
-          for k in range(4):  # 4 walls (one for each direction)
-            # check if the wall needs to be created:
+              if level.is_wall(i + neighbours[k][0],j + neighbours[k][1]):
+                continue
 
-            if level.is_wall(i + neighbours[k][0],j + neighbours[k][1]):
-              continue
-
-            tile_node_path = level_node_path.attachNewNode(make_node(level.get_tile(i,j).wall_model))
-            tile_node_path.setPos(i + offsets[k][0] - half_width,0,j + offsets[k][1] - half_height)
-            tile_node_path.setHpr(0,0,rotations[k])
+              tile_node_path = level_node_path.attachNewNode(make_node(level.get_tile(i,j).wall_model))
+              tile_node_path.setPos(i + offsets[k][0] - half_width,0,j + offsets[k][1] - half_height)
+              tile_node_path.setHpr(0,0,rotations[k])
 
         if level.get_tile(i,j).ceiling:
           tile_node_path = level_node_path.attachNewNode(make_node(level.get_tile(i,j).ceiling_model))

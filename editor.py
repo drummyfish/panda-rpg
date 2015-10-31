@@ -2,7 +2,7 @@ from Tkinter import *
 from ttk import Frame, Button, Label, Style
 import tkFileDialog
 import math
-from general import *
+from level import *
 
 class Editor(Frame):
   TILE_SIZE = 20
@@ -35,7 +35,16 @@ class Editor(Frame):
    
   def on_set_map_info_click(self):
     self.level.set_name(self.get_text("name"))
-     
+    self.level.set_skybox_textures(self.string_to_list(self.get_text("skybox textures")))
+    
+    diffuse_lights = self.get_text("daytime colors").replace(" ", "").split(";")
+   
+    for i in range(len(diffuse_lights)):
+      values = diffuse_lights[i][1:-1].split(",")
+      diffuse_lights[i] = (float(values[0]),float(values[1]),float(values[2]))
+      
+    self.level.set_light_properties(float(self.get_text("ambient light amount")),diffuse_lights)
+    
   def on_canvas_click(self, event):
     self.selected_tile = self.pixel_to_tile_coordinates(event.x,event.y)
     self.redraw_level()
@@ -57,6 +66,9 @@ class Editor(Frame):
       self.redraw_level()
     except Exception:
       print("error: wrong value")
+    
+  def color_to_string(self, color):
+    return "(" + str(color[0]) + "," + str(color[1]) + "," + str(color[2]) + ")"
     
   ## Sets text in given text widget (of given name).
     
@@ -88,7 +100,7 @@ class Editor(Frame):
       else:
         result += ";"
       
-      result += item
+      result += str(item)
     
     return result
     
@@ -104,6 +116,9 @@ class Editor(Frame):
     if self.selected_tile != None:
       tile = self.level.get_tile(self.selected_tile[0],self.selected_tile[1])
       self.set_text("name",self.level.get_name())
+      self.set_text("ambient light amount",str(self.level.get_ambient_light_amount()))
+      self.set_text("daytime colors",self.list_to_string(self.level.get_diffuse_lights()).replace(" ",""))
+      self.set_text("fog color",self.color_to_string(self.level.get_fog_color()))
       self.set_text("wall model",tile.wall_model.model_name)
       self.set_text("wall textures",self.list_to_string(tile.wall_model.texture_names))
       self.set_text("floor model",tile.floor_model.model_name)
@@ -116,6 +131,9 @@ class Editor(Frame):
       self.set_check("has ceiling",tile.ceiling)
     else:
       self.set_text("name","")
+      self.set_text("ambient light amount","")
+      self.set_text("daytime colors","")
+      self.set_text("fog color","")
       self.set_text("wall model","")
       self.set_text("wall textures","")
       self.set_text("floor model","")
@@ -255,6 +273,7 @@ class Editor(Frame):
     self.add_name_value_input("skybox textures")
     self.add_name_value_input("daytime colors")
     self.add_name_value_input("ambient light amount")
+    self.add_name_value_input("fog color")
     self.add_name_value_input("width")
     self.add_name_value_input("height")
     self.add_button("set map info",self.on_set_map_info_click)

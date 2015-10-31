@@ -39,6 +39,11 @@ class LevelTile:
       self.floor_model = AnimatedTextureModel(level_tile.floor_model)        
       self.ceiling_model = AnimatedTextureModel(level_tile.ceiling_model)      
     
+  ## Checks if the tile is empty (has no model). Empty tile can still have ceiling.
+    
+  def is_empty(self):
+    return (self.wall and len(self.wall_model.model_name) == 0) or (not self.wall and len(self.floor_model.model_name) == 0)
+    
 ## Represents a level prop, for example a column. Prop has its position and orientation
 #  but doesnt affect anything in the game and has no colissions.
 
@@ -73,7 +78,7 @@ class Level:
     self.skybox_textures = []              ##< contains names of skybox textures that are being chained between during daytime
     self.ambient_light_amount = 0.5        ##< amount of ambient light in range <0,1>
     self.fog_color = (0.5,0.5,0.5)         ##< fog color
-    self.diffuse_lights = [(1.0,1.0,1.0)]  ##< list of light colors (3-item tuples tuples) that are interpolated between during daytime
+    self.diffuse_lights = [(1.0,1.0,1.0),(0.5,0.5,0.5)]  ##< list of light colors (3-item tuples tuples) that are interpolated between during daytime
     self.props = []
     self.name = ""                         ##< level name
 
@@ -122,6 +127,10 @@ class Level:
   
   def get_diffuse_lights(self):
     return self.diffuse_lights
+  
+  ## Sets the fog color.
+  #
+  #  @param fog_color fog color (three item tuple of floats in range <0,1>)
   
   def set_fog_color(self, fog_color):
     self.fog_color = fog_color
