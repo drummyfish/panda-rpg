@@ -229,7 +229,7 @@ class MyApp(ShowBase, DirectObject.DirectObject):
     fog_color = level.get_fog_color()
     fog.setColor(fog_color[0],fog_color[1],fog_color[2])
     fog.setExpDensity(0.1)
-    fog.setLinearRange(10,20)
+    fog.setLinearRange(level.get_fog_distance(),10)
     
     level_node_path = NodePath("level")
     level_node_path.reparentTo(self.render)

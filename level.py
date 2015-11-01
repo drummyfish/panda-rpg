@@ -78,6 +78,7 @@ class Level:
     self.skybox_textures = []              ##< contains names of skybox textures that are being chained between during daytime
     self.ambient_light_amount = 0.5        ##< amount of ambient light in range <0,1>
     self.fog_color = (0.5,0.5,0.5)         ##< fog color
+    self.fog_distance = 10
     self.diffuse_lights = [(1.0,1.0,1.0),(0.5,0.5,0.5)]  ##< list of light colors (3-item tuples tuples) that are interpolated between during daytime
     self.props = []
     self.name = ""                         ##< level name
@@ -106,6 +107,12 @@ class Level:
           self.layout[i][j] = old_layout[i][j]
         except Exception:
           self.layout[i][j] = LevelTile()
+
+  def set_fog_distance(self,distance):
+    self.fog_distance = distance
+
+  def get_fog_distance(self):
+    return self.fog_distance
 
   def add_prop(self, prop):
     self.props.append(prop)

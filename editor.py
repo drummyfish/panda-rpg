@@ -45,6 +45,7 @@ class Editor(Frame):
     self.level.set_light_properties(float(self.get_text("ambient light amount")),diffuse_lights)
     
     self.level.set_size(int(self.get_text("width")),int(self.get_text("height")))
+    self.level.set_fog_distance(float(self.get_text("fog distance")))
     self.selected_tile = None
     self.redraw_level()
     
@@ -123,6 +124,7 @@ class Editor(Frame):
       self.set_text("skybox textures",self.list_to_string(self.level.get_skybox_textures()))
       self.set_text("daytime colors",self.list_to_string(self.level.get_diffuse_lights()).replace(" ",""))
       self.set_text("fog color",self.color_to_string(self.level.get_fog_color()))
+      self.set_text("fog distance",float(self.level.get_fog_distance()))
       self.set_text("wall model",tile.wall_model.model_name)
       self.set_text("wall textures",self.list_to_string(tile.wall_model.texture_names))
       self.set_text("floor model",tile.floor_model.model_name)
@@ -139,6 +141,7 @@ class Editor(Frame):
       self.set_text("skybox textures","")
       self.set_text("daytime colors","")
       self.set_text("fog color","")
+      self.set_text("fog distance","")
       self.set_text("wall model","")
       self.set_text("wall textures","")
       self.set_text("floor model","")
