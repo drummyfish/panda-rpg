@@ -6,12 +6,15 @@ from level import *
 
 class Editor(Frame):
   TILE_SIZE = 20
+  PROP_SIZE = 15         
   SMALL_TILE_SIZE = 14         # for displaying ceiling
   PADDING_X = 3
   PADDING_Y = 1
   
   def __init__(self, parent):
     Frame.__init__(self, parent)   
+    self.selected_tile = None        ##< selected tile coordinates or None
+    self.selected_prop = None        ##< selected prop reference or None
     self.parent = parent
     self.init_ui()
         
@@ -49,27 +52,62 @@ class Editor(Frame):
     self.selected_tile = None
     self.redraw_level()
     
+  def on_new_prop_click(self):
+    new_prop = LevelProp()
+    new_prop.position = (1.0,1.0)
+    self.level.add_prop(new_prop)
+    self.redraw_level()
+    
   def on_canvas_click(self, event):
-    self.selected_tile = self.pixel_to_tile_coordinates(event.x,event.y)
+    prop_clicked = None
+    
+    if self.get_check("display props"):
+      for prop in self.level.get_props():
+        coordinates = self.pixel_to_world_coordinates(event.x,event.y)
+        
+        dx = coordinates[0] - prop.position[0]
+        dy = coordinates[1] - prop.position[1]
+        
+        distance = math.sqrt(dx * dx + dy * dy)
+        
+        if distance < 1.0:
+          prop_clicked = prop
+          break
+      
+    if prop_clicked != None:
+      self.selected_prop = prop_clicked
+      self.selected_tile = None
+    else:
+      self.selected_prop = None
+      self.selected_tile = self.pixel_to_tile_coordinates(event.x,event.y)
+    
     self.redraw_level()
     self.update_gui_info()
 
   def on_canvas_click2(self, event):   # right click 
     try:
-      clicked_tile = self.pixel_to_tile_coordinates(event.x,event.y)
-      tile = self.level.get_tile(clicked_tile[0],clicked_tile[1])
-      tile.wall = self.get_check("is wall")
-      tile.ceiling = self.get_check("has ceiling")
-      tile.wall_model.model_name = self.get_text("wall model")
-      tile.wall_model.texture_names = self.string_to_list(self.get_text("wall textures"))
-      tile.floor_model.texture_names = self.string_to_list(self.get_text("floor textures"))
-      tile.ceiling_model.texture_names = self.string_to_list(self.get_text("ceiling textures"))
-      tile.floor_model.model_name = self.get_text("floor model")
-      tile.ceiling_model.model_name = self.get_text("ceiling model")
-      tile.floor_orientation = int(self.get_text("orientation"))
+      if self.selected_tile != None:
+        clicked_tile = self.pixel_to_tile_coordinates(event.x,event.y)
+        tile = self.level.get_tile(clicked_tile[0],clicked_tile[1])
+        tile.wall = self.get_check("is wall")
+        tile.ceiling = self.get_check("has ceiling")
+        tile.wall_model.model_name = self.get_text("wall model")
+        tile.wall_model.texture_names = self.string_to_list(self.get_text("wall textures"))
+        tile.floor_model.texture_names = self.string_to_list(self.get_text("floor textures"))
+        tile.ceiling_model.texture_names = self.string_to_list(self.get_text("ceiling textures"))
+        tile.floor_model.model_name = self.get_text("floor model")
+        tile.ceiling_model.model_name = self.get_text("ceiling model")
+        tile.floor_orientation = int(self.get_text("orientation"))
+      elif self.selected_prop != None:
+        self.selected_prop.position = self.pixel_to_world_coordinates(event.x,event.y)
+        
+        if self.get_check("stick to grid"):
+          self.selected_prop.position = (round(self.selected_prop.position[0] * 2) / 2.0,round(self.selected_prop.position[1] * 2) / 2.0)
+        
       self.redraw_level()
+      self.update_gui_info()
     except Exception:
-      print("error: wrong value")
+      print("error")
     
   def color_to_string(self, color):
     return "(" + str(color[0]) + "," + str(color[1]) + "," + str(color[2]) + ")"
@@ -153,9 +191,33 @@ class Editor(Frame):
       self.set_check("is wall",False)
       self.set_check("has ceiling",False)
       
+    if self.selected_prop != None:
+      self.set_text("prop position",str(self.selected_prop.position[0]) + ";" + str(self.selected_prop.position[1]))
+      
+      self.set_text("prop orientation",str(self.selected_prop.orientation))
+      self.set_text("prop model",self.selected_prop.model.model_name)
+      self.set_text("prop textures",self.list_to_string(self.selected_prop.model.texture_names))
+      self.set_text("prop framerate",str(self.selected_prop.model.framerate))
+      
+    else:
+      self.set_text("prop position","")
+      self.set_text("prop orientation","")
+      self.set_text("prop model","")
+      self.set_text("prop textures","")
+      
+  ## Returns integer tile coordinates from canvas pixel coordinates.
+      
   def pixel_to_tile_coordinates(self, x, y):
     return (int(math.floor(x / Editor.TILE_SIZE)),int(math.floor(y / Editor.TILE_SIZE)))
-   
+  
+  ## Same as pixel_to_tile_coordinates but returns floats coordiantes.
+  
+  def pixel_to_world_coordinates(self, x, y):
+    return (float(x) / Editor.TILE_SIZE,float(y) / Editor.TILE_SIZE)
+  
+  def world_to_pixel_coordinates(self, x, y):
+    return (int(x * self.TILE_SIZE),int(y * self.TILE_SIZE))
+  
   ## Computes color for AnimatedTextureModel object as its hash based on attributes checked
   #  in GUI (display texture, display model etc.). Returns tkinter color string.
    
@@ -221,6 +283,19 @@ class Editor(Frame):
 
         if self.selected_tile != None and self.selected_tile[0] == x and self.selected_tile[1] == y:
           self.canvas.create_rectangle(corner1[0], corner1[1], corner2[0], corner2[1], outline="red")
+
+    if self.get_check("display props"):
+      for prop in self.level.get_props():
+        border = "black"
+      
+        if prop == self.selected_prop:
+          border = "red"
+        
+        position = self.world_to_pixel_coordinates(prop.position[0],prop.position[1])
+      
+        difference = Editor.PROP_SIZE / 2
+      
+        self.canvas.create_oval(position[0] - difference,position[1] - difference, position[0] + difference, position[1] + difference, fill="white", outline=border)
 
   ## Adds given widget to given place in grid layout.
 
@@ -288,10 +363,13 @@ class Editor(Frame):
     self.add_button("set map info",self.on_set_map_info_click)
     self.add_name_value_input("wall model")
     self.add_name_value_input("wall textures")
+    self.add_name_value_input("wall framerate")
     self.add_name_value_input("floor model")
     self.add_name_value_input("floor textures")
+    self.add_name_value_input("floor framerate")
     self.add_name_value_input("ceiling model")
     self.add_name_value_input("ceiling textures")
+    self.add_name_value_input("ceiling framerate")
     self.add_name_value_input("ceiling height")
     self.add_name_value_input("orientation")
     self.add_name_check_input("is wall")
@@ -299,10 +377,12 @@ class Editor(Frame):
     self.add_name_check_input("display texture",True,self.redraw_level)
     self.add_name_check_input("display model",True,self.redraw_level)
     self.add_name_check_input("display ceiling",True,self.redraw_level)
+    self.add_name_check_input("display props",True,self.redraw_level)
     self.add_name_check_input("display ceiling height",True,self.redraw_level)
     self.add_name_check_input("display orientation",False,self.redraw_level)
     
-    self.add_button("new prop")
+    self.add_button("new prop",self.on_new_prop_click)
+    self.add_button("duplicate prop")
     self.add_button("delete prop")
     self.add_button("set prop properties")
     self.add_name_check_input("stick to grid",True,self.redraw_level)
@@ -310,6 +390,7 @@ class Editor(Frame):
     self.add_name_value_input("prop orientation")
     self.add_name_value_input("prop model")
     self.add_name_value_input("prop textures")
+    self.add_name_value_input("prop framerate")
     
     self.canvas = Canvas(self, width=200, height=100, background="white", borderwidth=2, relief=SUNKEN)
     self.add_widget(self.canvas,0,2,1,self.current_row + 1)

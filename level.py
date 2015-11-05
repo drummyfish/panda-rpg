@@ -50,7 +50,7 @@ class LevelTile:
 class LevelProp:
   def __init__(self, position=[0.0,0.0], orientation=0):
     self.model = AnimatedTextureModel()
-    self.position = position
+    self.position = position             ##< (x,y) float position
     self.orientation = orientation       ##< rotation in degrees
 
 class Level:
