@@ -58,6 +58,40 @@ class Editor(Frame):
     self.level.add_prop(new_prop)
     self.redraw_level()
     
+  def on_delete_prop_click(self):
+    props = self.level.get_props()
+    
+    for i in range(len(props)):
+      if props[i] == self.selected_prop:
+        del props[i]
+        break
+      
+    self.selected_prop = None
+    self.redraw_level()
+    self.update_gui_info()
+
+  def on_duplicate_prop_click(self):
+    if self.selected_prop == None:
+      return
+    
+    new_prop = LevelProp(self.selected_prop)
+    new_prop.position = (1.0,1.0)
+    self.level.add_prop(new_prop)
+    self.redraw_level()
+    
+  def on_set_prop_properties_click(self):
+    if self.selected_prop == None:
+      return
+    
+    helper_list = self.get_text("prop position").split(";")
+    self.selected_prop.position = (float(helper_list[0]),float(helper_list[1]))
+    self.selected_prop.model.model_name = self.get_text("prop model")
+    self.selected_prop.model.texture_names = self.string_to_list(self.get_text("prop textures"))
+    self.selected_prop.model.framerate = float(self.get_text("prop framerate"))
+    self.selected_prop.orientation = float(self.get_text("prop orientation"))
+    self.redraw_level()
+    self.update_gui_info()
+    
   def on_canvas_click(self, event):
     prop_clicked = None
     
@@ -98,6 +132,9 @@ class Editor(Frame):
         tile.floor_model.model_name = self.get_text("floor model")
         tile.ceiling_model.model_name = self.get_text("ceiling model")
         tile.floor_orientation = int(self.get_text("orientation"))
+        tile.wall_model.framerate = float(self.get_text("wall framerate"))
+        tile.floor_model.framerate = float(self.get_text("floor framerate"))
+        tile.ceiling_model.framerate = float(self.get_text("ceiling framerate"))
       elif self.selected_prop != None:
         self.selected_prop.position = self.pixel_to_world_coordinates(event.x,event.y)
         
@@ -154,17 +191,21 @@ class Editor(Frame):
   def update_gui_info(self):
     self.set_text("width",str(self.level.get_width()))
     self.set_text("height",str(self.level.get_height()))
+    self.set_text("name",self.level.get_name())
+    self.set_text("ambient light amount",str(self.level.get_ambient_light_amount()))
+    self.set_text("skybox textures",self.list_to_string(self.level.get_skybox_textures()))
+    self.set_text("daytime colors",self.list_to_string(self.level.get_diffuse_lights()).replace(" ",""))
+    self.set_text("fog color",self.color_to_string(self.level.get_fog_color()))
+    self.set_text("fog distance",float(self.level.get_fog_distance()))
     
     if self.selected_tile != None:
       tile = self.level.get_tile(self.selected_tile[0],self.selected_tile[1])
-      self.set_text("name",self.level.get_name())
-      self.set_text("ambient light amount",str(self.level.get_ambient_light_amount()))
-      self.set_text("skybox textures",self.list_to_string(self.level.get_skybox_textures()))
-      self.set_text("daytime colors",self.list_to_string(self.level.get_diffuse_lights()).replace(" ",""))
-      self.set_text("fog color",self.color_to_string(self.level.get_fog_color()))
-      self.set_text("fog distance",float(self.level.get_fog_distance()))
+      self.set_text("tile coordinates",str(self.selected_tile[0]) + ";" + str(self.selected_tile[1]))
       self.set_text("wall model",tile.wall_model.model_name)
-      self.set_text("wall textures",self.list_to_string(tile.wall_model.texture_names))
+      self.set_text("wall textures",self.list_to_string(tile.wall_model.texture_names))      
+      self.set_text("wall framerate",str(tile.wall_model.framerate))
+      self.set_text("floor framerate",str(tile.floor_model.framerate))
+      self.set_text("ceiling framerate",str(tile.ceiling_model.framerate))
       self.set_text("floor model",tile.floor_model.model_name)
       self.set_text("floor textures",self.list_to_string(tile.floor_model.texture_names))
       self.set_text("ceiling model",tile.ceiling_model.model_name)
@@ -174,14 +215,12 @@ class Editor(Frame):
       self.set_check("is wall",tile.wall)
       self.set_check("has ceiling",tile.ceiling)
     else:
-      self.set_text("name","")
-      self.set_text("ambient light amount","")
-      self.set_text("skybox textures","")
-      self.set_text("daytime colors","")
-      self.set_text("fog color","")
-      self.set_text("fog distance","")
+      self.set_text("tile coordinates","")
       self.set_text("wall model","")
       self.set_text("wall textures","")
+      self.set_text("wall framerate","")
+      self.set_text("floor framerate","")
+      self.set_text("ceiling framerate","")
       self.set_text("floor model","")
       self.set_text("floor textures","")
       self.set_text("ceiling model","")
@@ -300,7 +339,6 @@ class Editor(Frame):
   ## Adds given widget to given place in grid layout.
 
   def add_widget(self, widget, grid_x, grid_y, column_span=1, row_span=1, spread_x=False):
-    
     stick = W + N
     
     if spread_x:
@@ -308,35 +346,53 @@ class Editor(Frame):
     
     widget.grid(row=grid_x, column=grid_y, rowspan=row_span, columnspan=column_span, padx=Editor.PADDING_X, pady=Editor.PADDING_Y, sticky=stick)
      
-  def add_name_value_input(self, name):
+  def add_name_value_input(self, name, left=True):
+    column = 0 if left else 3
+    row = self.current_row_left if left else self.current_row_right
+    
     self.label_widgets[name] = Label(self, text=name)
-    self.add_widget(self.label_widgets[name],self.current_row,0)
+    self.add_widget(self.label_widgets[name],row,column)
     
     self.text_widgets[name] = Text(self, height=1, width=30)
-    self.add_widget(self.text_widgets[name],self.current_row,1)
+    self.add_widget(self.text_widgets[name],row,column + 1)
     
-    self.current_row += 1
+    if left:
+      self.current_row_left += 1
+    else:
+      self.current_row_right += 1
     
-  def add_name_check_input(self, name, checked=False, command=None):
+  def add_name_check_input(self, name, checked=False, command=None, left=True):
+    column = 0 if left else 3
+    row = self.current_row_left if left else self.current_row_right
+    
     self.label_widgets[name] = Label(self, text=name)
-    self.add_widget(self.label_widgets[name],self.current_row,0)
+    self.add_widget(self.label_widgets[name],row,column)
     
     value = IntVar()
     
     self.checkbox_widgets[name] = Checkbutton(self,variable=value,command=command)
     self.checkbox_widgets[name].value = value
-    self.add_widget(self.checkbox_widgets[name],self.current_row,1)
+    self.add_widget(self.checkbox_widgets[name],row,column + 1)
     
     self.set_check(name,checked)
     
-    self.current_row += 1
-     
-  def add_button(self, name, command=None):
+    if left:
+      self.current_row_left += 1
+    else:
+      self.current_row_right += 1
+      
+  def add_button(self, name, command=None, left=True):
+    column = 0 if left else 3
+    row = self.current_row_left if left else self.current_row_right
+    
     self.button_widgets[name] = Button(self,text=name,command=command)
-    self.add_widget(self.button_widgets[name],self.current_row,0,2,1,True)
-    
-    self.current_row += 1
-    
+    self.add_widget(self.button_widgets[name],row,column,2,1,True)
+        
+    if left:
+      self.current_row_left += 1
+    else:
+      self.current_row_right += 1
+      
   def init_ui(self):
     self.parent.title("editor")
     self.style = Style()
@@ -348,7 +404,8 @@ class Editor(Frame):
     self.checkbox_widgets = {}
     self.button_widgets = {}
     
-    self.current_row = 0
+    self.current_row_left = 0
+    self.current_row_right = 0
     
     self.add_button("save file",self.on_save_file_clicked)
     self.add_button("load file",self.on_load_file_clicked)
@@ -361,6 +418,7 @@ class Editor(Frame):
     self.add_name_value_input("width")
     self.add_name_value_input("height")
     self.add_button("set map info",self.on_set_map_info_click)
+    self.add_name_value_input("tile coordinates")
     self.add_name_value_input("wall model")
     self.add_name_value_input("wall textures")
     self.add_name_value_input("wall framerate")
@@ -381,19 +439,19 @@ class Editor(Frame):
     self.add_name_check_input("display ceiling height",True,self.redraw_level)
     self.add_name_check_input("display orientation",False,self.redraw_level)
     
-    self.add_button("new prop",self.on_new_prop_click)
-    self.add_button("duplicate prop")
-    self.add_button("delete prop")
-    self.add_button("set prop properties")
-    self.add_name_check_input("stick to grid",True,self.redraw_level)
-    self.add_name_value_input("prop position")
-    self.add_name_value_input("prop orientation")
-    self.add_name_value_input("prop model")
-    self.add_name_value_input("prop textures")
-    self.add_name_value_input("prop framerate")
+    self.add_button("new prop",self.on_new_prop_click,left=False)
+    self.add_button("duplicate prop",left=False,command=self.on_duplicate_prop_click)
+    self.add_button("delete prop",left=False,command=self.on_delete_prop_click)
+    self.add_button("set prop properties",left=False,command=self.on_set_prop_properties_click)
+    self.add_name_check_input("stick to grid",True,self.redraw_level,left=False)
+    self.add_name_value_input("prop position",left=False)
+    self.add_name_value_input("prop orientation",left=False)
+    self.add_name_value_input("prop model",left=False)
+    self.add_name_value_input("prop textures",left=False)
+    self.add_name_value_input("prop framerate",left=False)
     
     self.canvas = Canvas(self, width=200, height=100, background="white", borderwidth=2, relief=SUNKEN)
-    self.add_widget(self.canvas,0,2,1,self.current_row + 1)
+    self.add_widget(self.canvas,0,2,1,max(self.current_row_left,self.current_row_right) + 1)
     
     self.canvas.bind("<Button-1>", self.on_canvas_click)
     self.canvas.bind("<Button-3>", self.on_canvas_click2)

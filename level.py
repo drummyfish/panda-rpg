@@ -48,10 +48,15 @@ class LevelTile:
 #  but doesnt affect anything in the game and has no colissions.
 
 class LevelProp:
-  def __init__(self, position=[0.0,0.0], orientation=0):
-    self.model = AnimatedTextureModel()
-    self.position = position             ##< (x,y) float position
-    self.orientation = orientation       ##< rotation in degrees
+  def __init__(self, level_prop=None, position=[0.0,0.0], orientation=0):
+    if level_prop == None:
+      self.model = AnimatedTextureModel()
+      self.position = position             ##< (x,y) float position
+      self.orientation = orientation       ##< rotation in degrees
+    else:
+      self.model = AnimatedTextureModel(level_prop.model)
+      self.position  = level_prop.position
+      self.orientation = level_prop.orientation
 
 class Level:
   ## Class static method, saves the level into given file.
