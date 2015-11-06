@@ -122,27 +122,25 @@ class MyApp(ShowBase, DirectObject.DirectObject):
   def set_daytime(self, daytime):
     skybox_node = self.render.find("**/skybox")
     
-    if skybox_node.isEmpty():
-      return
+    if not skybox_node.isEmpty():      # handle skybox, if there is any
+      texture_index = int(len(self.skybox_textures) * self.daytime)
+      fraction = 1.0 / len(self.skybox_textures)
+      remainder = self.daytime - fraction * texture_index
+      ratio = remainder / fraction
     
-    texture_index = int(len(self.skybox_textures) * self.daytime)
-    fraction = 1.0 / len(self.skybox_textures)
-    remainder = self.daytime - fraction * texture_index
-    ratio = remainder / fraction
+      transition_range = 0.2
+      remaining_range = (1.0 - transition_range) / 2.0
     
-    transition_range = 0.2
-    remaining_range = (1.0 - transition_range) / 2.0
+      if ratio < remaining_range:
+        ratio = 0.0
+      elif ratio < 1.0 - remaining_range:
+        ratio = (ratio - remaining_range) / transition_range
+      else:
+        ratio = 1.0
     
-    if ratio < remaining_range:
-      ratio = 0.0
-    elif ratio < 1.0 - remaining_range:
-      ratio = (ratio - remaining_range) / transition_range
-    else:
-      ratio = 1.0
-    
-    skybox_node.setTexture(self.skybox_texture_stage1,self.skybox_textures[texture_index])
-    skybox_node.setTexture(self.skybox_texture_stage2,self.skybox_textures[(texture_index + 1) % len(self.skybox_textures)])
-    self.skybox_texture_stage2.setColor(Vec4(ratio,ratio,ratio,ratio))
+      skybox_node.setTexture(self.skybox_texture_stage1,self.skybox_textures[texture_index])
+      skybox_node.setTexture(self.skybox_texture_stage2,self.skybox_textures[(texture_index + 1) % len(self.skybox_textures)])
+      self.skybox_texture_stage2.setColor(Vec4(ratio,ratio,ratio,ratio))
     
     # set diffuse light:
     
@@ -229,7 +227,7 @@ class MyApp(ShowBase, DirectObject.DirectObject):
     fog_color = level.get_fog_color()
     fog.setColor(fog_color[0],fog_color[1],fog_color[2])
     fog.setExpDensity(0.1)
-    fog.setLinearRange(level.get_fog_distance(),10)
+    fog.setLinearRange(level.get_fog_distance(),level.get_fog_distance() + 10)  
     
     level_node_path = NodePath("level")
     level_node_path.reparentTo(self.render)
@@ -265,31 +263,32 @@ class MyApp(ShowBase, DirectObject.DirectObject):
 
     for prop in level.get_props():
       tile_node_path = level_node_path.attachNewNode(make_node(prop.model))
-      tile_node_path.setPos(prop.position[0] - half_width,0,prop.position[1] - half_height)
+      tile_node_path.setPos(prop.position[0] - half_width - 0.5,0,prop.position[1] - half_height - 0.5)
       tile_node_path.setHpr(prop.orientation,0,0)
 
-    skybox = self.loader.loadModel(RESOURCE_PATH + "skybox.obj")
-    skybox.setName("skybox")
-    skybox.reparentTo(self.camera)
-    skybox.setHpr(0,90,0)
-    skybox.set_bin("background", 0);
-    skybox.set_depth_write(False);
-    skybox.set_compass()
-    skybox_material = Material()
-    skybox_material.setEmission((1, 1, 1, 1))
-    skybox.setMaterial(skybox_material)
-  
-    self.skybox_texture_stage1 = TextureStage("ts0")
-    self.skybox_texture_stage2 = TextureStage("ts2")
-    self.skybox_texture_stage2.setCombineRgb(TextureStage.CMInterpolate,TextureStage.CSTexture,TextureStage.COSrcColor,TextureStage.CSPrevious,TextureStage.COSrcColor,TextureStage.CSConstant,TextureStage.COSrcColor)
-    self.skybox_texture_stage2.setColor(Vec4(0.5,0.5,0.5,0.5))
-    self.skybox_textures = []
-    
     skybox_texture_names = level.get_skybox_textures()
     
-    for skybox_texture_name in skybox_texture_names:
-      load_texture(skybox_texture_name)
-      self.skybox_textures.append(textures[skybox_texture_name])
+    if len(skybox_texture_names) > 0:      # no skybox textures => no skybox
+      skybox = self.loader.loadModel(RESOURCE_PATH + "skybox.obj")
+      skybox.setName("skybox")
+      skybox.reparentTo(self.camera)
+      skybox.setHpr(0,90,0)
+      skybox.set_bin("background", 0);
+      skybox.set_depth_write(False);
+      skybox.set_compass()
+      skybox_material = Material()
+      skybox_material.setEmission((1, 1, 1, 1))
+      skybox.setMaterial(skybox_material)
+  
+      self.skybox_texture_stage1 = TextureStage("ts0")
+      self.skybox_texture_stage2 = TextureStage("ts2")
+      self.skybox_texture_stage2.setCombineRgb(TextureStage.CMInterpolate,TextureStage.CSTexture,TextureStage.COSrcColor,TextureStage.CSPrevious,TextureStage.COSrcColor,TextureStage.CSConstant,TextureStage.COSrcColor)
+      self.skybox_texture_stage2.setColor(Vec4(0.5,0.5,0.5,0.5))
+      self.skybox_textures = []
+    
+      for skybox_texture_name in skybox_texture_names:
+        load_texture(skybox_texture_name)
+        self.skybox_textures.append(textures[skybox_texture_name])
 
     level_node_path.setTransparency(True)
     level_node_path.reparentTo(self.render)

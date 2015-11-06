@@ -30,6 +30,7 @@ class LevelTile:
       self.wall_model = AnimatedTextureModel()         ##< model for wall 
       self.floor_model = AnimatedTextureModel()        ##< model for floor
       self.ceiling_model = AnimatedTextureModel()      ##< model for ceiling
+      self.steppable = not self.wall                   ##< whether the tile can be stepped on
     else:                                              # make deep copy
       self.wall = level_tile.wall
       self.ceiling = level_tile.ceiling
@@ -38,6 +39,7 @@ class LevelTile:
       self.wall_model = AnimatedTextureModel(level_tile.wall_model) 
       self.floor_model = AnimatedTextureModel(level_tile.floor_model)        
       self.ceiling_model = AnimatedTextureModel(level_tile.ceiling_model)      
+      self.steppable = level_tile.steppable
     
   ## Checks if the tile is empty (has no model). Empty tile can still have ceiling.
     

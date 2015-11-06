@@ -36,6 +36,9 @@ class Editor(Frame):
     self.selected_tile = None
     self.redraw_level()
    
+  def on_is_wall_click(self):
+    self.set_check("is steppable", not self.get_check("is wall"))
+   
   def on_set_map_info_click(self):
     self.level.set_name(self.get_text("name"))
     self.level.set_skybox_textures(self.string_to_list(self.get_text("skybox textures")))
@@ -132,6 +135,7 @@ class Editor(Frame):
         tile.floor_model.model_name = self.get_text("floor model")
         tile.ceiling_model.model_name = self.get_text("ceiling model")
         tile.floor_orientation = int(self.get_text("orientation"))
+        tile.steppable = self.get_check("is steppable")
         tile.wall_model.framerate = float(self.get_text("wall framerate"))
         tile.floor_model.framerate = float(self.get_text("floor framerate"))
         tile.ceiling_model.framerate = float(self.get_text("ceiling framerate"))
@@ -213,6 +217,7 @@ class Editor(Frame):
       self.set_text("ceiling height",str(tile.ceiling_height))
       self.set_text("orientation",str(tile.floor_orientation))
       self.set_check("is wall",tile.wall)
+      self.set_check("is steppable",tile.steppable)
       self.set_check("has ceiling",tile.ceiling)
     else:
       self.set_text("tile coordinates","")
@@ -229,6 +234,7 @@ class Editor(Frame):
       self.set_text("orientation","")
       self.set_check("is wall",False)
       self.set_check("has ceiling",False)
+      self.set_check("is steppable",False)
       
     if self.selected_prop != None:
       self.set_text("prop position",str(self.selected_prop.position[0]) + ";" + str(self.selected_prop.position[1]))
@@ -333,8 +339,10 @@ class Editor(Frame):
         position = self.world_to_pixel_coordinates(prop.position[0],prop.position[1])
       
         difference = Editor.PROP_SIZE / 2
-      
-        self.canvas.create_oval(position[0] - difference,position[1] - difference, position[0] + difference, position[1] + difference, fill="white", outline=border)
+  
+        fill_color = self.compute_model_color(prop.model)
+  
+        self.canvas.create_oval(position[0] - difference,position[1] - difference, position[0] + difference, position[1] + difference, fill=fill_color, outline=border)
 
   ## Adds given widget to given place in grid layout.
 
@@ -355,6 +363,17 @@ class Editor(Frame):
     
     self.text_widgets[name] = Text(self, height=1, width=30)
     self.add_widget(self.text_widgets[name],row,column + 1)
+    
+    if left:
+      self.current_row_left += 1
+    else:
+      self.current_row_right += 1
+    
+  def add_separator(self, left=True):
+    column = 0 if left else 3
+    row = self.current_row_left if left else self.current_row_right
+    
+    self.add_widget(Label(self,text="----------------------"),row,column,1,2,True)
     
     if left:
       self.current_row_left += 1
@@ -430,14 +449,9 @@ class Editor(Frame):
     self.add_name_value_input("ceiling framerate")
     self.add_name_value_input("ceiling height")
     self.add_name_value_input("orientation")
-    self.add_name_check_input("is wall")
+    self.add_name_check_input("is wall",command=self.on_is_wall_click)
+    self.add_name_check_input("is steppable")
     self.add_name_check_input("has ceiling")
-    self.add_name_check_input("display texture",True,self.redraw_level)
-    self.add_name_check_input("display model",True,self.redraw_level)
-    self.add_name_check_input("display ceiling",True,self.redraw_level)
-    self.add_name_check_input("display props",True,self.redraw_level)
-    self.add_name_check_input("display ceiling height",True,self.redraw_level)
-    self.add_name_check_input("display orientation",False,self.redraw_level)
     
     self.add_button("new prop",self.on_new_prop_click,left=False)
     self.add_button("duplicate prop",left=False,command=self.on_duplicate_prop_click)
@@ -450,6 +464,15 @@ class Editor(Frame):
     self.add_name_value_input("prop textures",left=False)
     self.add_name_value_input("prop framerate",left=False)
     
+    self.add_separator(left=False)
+    
+    self.add_name_check_input("display texture",True,self.redraw_level,left=False)
+    self.add_name_check_input("display model",True,self.redraw_level,left=False)
+    self.add_name_check_input("display ceiling",True,self.redraw_level,left=False)
+    self.add_name_check_input("display props",True,self.redraw_level,left=False)
+    self.add_name_check_input("display ceiling height",True,self.redraw_level,left=False)
+    self.add_name_check_input("display orientation",False,self.redraw_level,left=False)
+    
     self.canvas = Canvas(self, width=200, height=100, background="white", borderwidth=2, relief=SUNKEN)
     self.add_widget(self.canvas,0,2,1,max(self.current_row_left,self.current_row_right) + 1)
     
@@ -458,8 +481,9 @@ class Editor(Frame):
     
     self.selected_tile = (0,0)
     
-    self.level = Level(30,35) #make_test_level()
+    self.level = Level(30,30)
     self.redraw_level()
+    self.update_gui_info()
     
 def main():
   root = Tk()
