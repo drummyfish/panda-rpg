@@ -78,6 +78,20 @@ class Level:
     input_file.close()
     return result
   
+  ## Returns a 2D list representing the level collision mask (x, y
+  #  coordinates contain either True - steppable, or False - not
+  #  steppable)
+  
+  def get_collision_mask(self):
+    result = []
+    
+    for i in range(self.get_width()):
+      result.append([])
+      for j in range(self.get_height()):
+        result[i].append(self.get_tile(i,j).steppable)
+          
+    return result
+    
   def __init__(self, width, height, default_tile=None):
     self.layout = [[None for i in range(height)] for j in range(width)]
     self.width = width

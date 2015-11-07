@@ -1,8 +1,9 @@
-from math import pi, sin, cos
+from math import pi, sin, cos, radians
 from direct.showbase.ShowBase import ShowBase
 from direct.task import Task
 from direct.actor.Actor import Actor
 from panda3d.core import *
+from pandac.PandaModules import WindowProperties
 from direct.showbase import DirectObject
 
 from level import *
@@ -15,14 +16,22 @@ class MyApp(ShowBase, DirectObject.DirectObject):
 
     self.daytime = 0.0                                              ##< time of day in range <0,1>
     self.update_daytime_counter = MyApp.DAYTIME_UPDATE_COUNTER      ##< counts frames to update daytime effects to increase FPS
+    self.collision_mask = None                                      ##< current level collision mask (2D list of bool)
+
+    self.player_position = [0.0,0.0]                                ##< player position
+    self.player_rotation = 0.0                                      ##< player rotation in degrees
 
     base.setFrameRateMeter(True)
+ 
+    props = WindowProperties()
+    props.setCursorHidden(True) 
+    base.win.requestProperties(props)
 
     # initialise input handling:
 
     self.camera_time_before = 0
-    self.camera_movement_speed = 9
-    self.camera_rotation_speed = 1500
+    self.camera_movement_speed = 5
+    self.camera_rotation_speed = 2000
 
     base.disableMouse()
 
@@ -40,7 +49,10 @@ class MyApp(ShowBase, DirectObject.DirectObject):
       self.accept(key,self.handle_input,[key,True])
       self.accept(key + "-up",self.handle_input,[key,False])
 
-    self.setup_environment_scene(Level.load_from_file(Level(1,1),"test_output.txt"))
+    level = Level.load_from_file(Level(1,1),"test_output.txt")
+    
+    self.collision_mask = level.get_collision_mask()
+    self.setup_environment_scene(level)
 
   def handle_input(self,input_name,input_value):
     self.input_state[input_name] = input_value
@@ -67,53 +79,71 @@ class MyApp(ShowBase, DirectObject.DirectObject):
     self.set_daytime(self.daytime)
     return task.cont
   
+  ## Computes a new position of object in movement, respecting the
+  #  collisions with level geometry.
+  #
+  #  @param position object position ((x,y) float tuple)
+  #  @param direction object orientation in degrees, starting pointing right, going CCW
+  #  @param distance distance to be travelled
+  #  @return new position as a tuple
+  
+  def move_with_collisions(self, position, direction, distance):
+    new_position = [position[0],position[1]]
+    
+    new_position[0] += cos(radians(direction)) * distance
+    new_position[1] -= sin(radians(direction)) * distance
+    
+    return new_position
+  
   def camera_task(self, task):
     current_position = self.camera.getPos()
 
     camera_forward = self.camera.getRelativeVector(self.render,VBase3(0,1,0))
     camera_right = self.camera.getRelativeVector(self.render,VBase3(1,0,0))
 
-    new_position = [current_position.getX(),current_position.getY(),current_position.getZ()]
+    new_position = [self.player_position[0],self.player_position[1]]
 
     time_difference = task.time - self.camera_time_before
     self.camera_time_before = task.time
 
-    coefficient = self.camera_movement_speed * time_difference
+    distance = self.camera_movement_speed * time_difference
 
     if self.input_state["w"]:
-      new_position[0] -= camera_forward[0] * coefficient
-      new_position[1] += camera_forward[1] * coefficient
+      new_position = self.move_with_collisions(self.player_position,self.player_rotation,distance)
 
     if self.input_state["s"]:
-      new_position[0] += camera_forward[0] * coefficient
-      new_position[1] -= camera_forward[1] * coefficient
+      new_position = self.move_with_collisions(self.player_position,self.player_rotation + 180,distance)
 
     if self.input_state["a"]:
-      new_position[0] -= camera_right[0] * coefficient
-      new_position[1] += camera_right[1] * coefficient
+      new_position = self.move_with_collisions(self.player_position,self.player_rotation + 90,distance)
 
     if self.input_state["d"]:
-      new_position[0] += camera_right[0] * coefficient
-      new_position[1] -= camera_right[1] * coefficient
+      new_position = self.move_with_collisions(self.player_position,self.player_rotation + 270,distance)
 
-    if self.input_state["e"]:
-      new_position[2] += self.camera_movement_speed * time_difference
-
-    if self.input_state["q"]:
-      new_position[2] -= self.camera_movement_speed * time_difference
+    self.player_position = new_position
 
     if self.input_state["mouse1"]:
       current_rotation = self.camera.getHpr()
+      current_position = self.camera.getPos()
+      
+      self.player_rotation = current_rotation[0] % 360
+      
       new_rotation = [current_rotation.getX(),current_rotation.getY(),current_rotation.getZ()] 
 
       window_center = (base.win.getXSize() / 2, base.win.getYSize() / 2)
       base.win.movePointer(0, window_center[0], window_center[1])
       
-      new_rotation[0] -= self.input_state["mx"] * self.camera_rotation_speed * time_difference
-      new_rotation[1] += self.input_state["my"] * self.camera_rotation_speed * time_difference
+      mouse_difference = (self.input_state["mx"],self.input_state["my"])
+      
+      if abs(mouse_difference[0]) > 0.001:
+        new_rotation[0] -= mouse_difference[0] * self.camera_rotation_speed * time_difference
+          
+      if abs(mouse_difference[1]) > 0.001:
+        new_rotation[1] += mouse_difference[1] * self.camera_rotation_speed * time_difference
+      
       self.camera.setHpr(new_rotation[0],new_rotation[1],new_rotation[2])
 
-    self.camera.setPos(new_position[0],new_position[1],new_position[2])
+    self.camera.setPos(self.player_position[1],self.player_position[0],0.7)
 
     return task.cont
 
@@ -223,9 +253,6 @@ class MyApp(ShowBase, DirectObject.DirectObject):
     base.camLens.setFov(105)       # setup the camera
     base.camLens.setNear(0.1)
     base.camLens.setFar(25)
-
-    half_width = level.get_width() / 2.0
-    half_height = level.get_height() / 2.0 
     
     fog = Fog("fog")
     fog_color = level.get_fog_color()
@@ -244,7 +271,7 @@ class MyApp(ShowBase, DirectObject.DirectObject):
         if not tile.is_empty():
           if not tile.wall:                            # floor tile
             tile_node_path = level_node_path.attachNewNode(make_node(level.get_tile(i,j).floor_model))
-            tile_node_path.setPos(i - half_width,0,j - half_height)
+            tile_node_path.setPos(i,0,j)
             tile_node_path.setHpr(0,0,level.get_tile(i,j).floor_orientation * 90)
           else:                                                       # wall
             offsets = [[0,0.5], [0.5,0], [-0.5,0], [0,-0.5]] # down, right, left, up
@@ -258,16 +285,16 @@ class MyApp(ShowBase, DirectObject.DirectObject):
                 continue
 
               tile_node_path = level_node_path.attachNewNode(make_node(level.get_tile(i,j).wall_model))
-              tile_node_path.setPos(i + offsets[k][0] - half_width,0,j + offsets[k][1] - half_height)
+              tile_node_path.setPos(i + offsets[k][0],0,j + offsets[k][1])
               tile_node_path.setHpr(0,0,rotations[k])
 
         if level.get_tile(i,j).ceiling:
           tile_node_path = level_node_path.attachNewNode(make_node(level.get_tile(i,j).ceiling_model))
-          tile_node_path.setPos(i - half_width,level.get_tile(i,j).ceiling_height,j - half_height)
+          tile_node_path.setPos(i,level.get_tile(i,j).ceiling_height,j)
 
     for prop in level.get_props():
       tile_node_path = level_node_path.attachNewNode(make_node(prop.model))
-      tile_node_path.setPos(prop.position[0] - half_width - 0.5,0,prop.position[1] - half_height - 0.5)
+      tile_node_path.setPos(prop.position[0] - 0.5,0,prop.position[1] - 0.5)
       tile_node_path.setHpr(0,0,prop.orientation)
 
     skybox_texture_names = level.get_skybox_textures()
@@ -296,8 +323,7 @@ class MyApp(ShowBase, DirectObject.DirectObject):
 
     level_node_path.setTransparency(True)
     level_node_path.reparentTo(self.render)
-    level_node_path.setPos(-4, 10, -0.5)
-    level_node_path.setHpr(0, 90, 0)
+    level_node_path.setHpr(90, 90, 0)
 
     # manage lights:
 
