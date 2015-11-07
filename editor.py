@@ -107,7 +107,7 @@ class Editor(Frame):
         
         distance = math.sqrt(dx * dx + dy * dy)
         
-        if distance < 1.0:
+        if distance < 0.7:
           prop_clicked = prop
           break
       
@@ -343,6 +343,9 @@ class Editor(Frame):
         fill_color = self.compute_model_color(prop.model)
   
         self.canvas.create_oval(position[0] - difference,position[1] - difference, position[0] + difference, position[1] + difference, fill=fill_color, outline=border)
+
+        self.canvas.create_line(position[0],position[1],position[0] + int(math.cos(math.radians(prop.orientation)) * difference),position[1] - int(math.sin(math.radians(prop.orientation)) * difference),fill="black")
+  
 
   ## Adds given widget to given place in grid layout.
 

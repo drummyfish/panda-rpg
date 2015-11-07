@@ -56,7 +56,7 @@ class MyApp(ShowBase, DirectObject.DirectObject):
     return task.cont
 
   def time_task(self, task):
-    self.daytime = (task.time / 3) % 1
+    self.daytime = (task.time / 10) % 1
     
     if self.update_daytime_counter > 0:
       self.update_daytime_counter -= 1
@@ -179,7 +179,7 @@ class MyApp(ShowBase, DirectObject.DirectObject):
     def load_texture(texture_name):            # loads texture into 'textures' cache (only if it hasn't been loaded laready)
       if not texture_name in textures:
         textures[texture_name] = self.loader.loadTexture(RESOURCE_PATH + texture_name)
-        textures[texture_name].setMinfilter(Texture.FTNearestMipmapLinear)
+        textures[texture_name].setMinfilter(Texture.FTLinearMipmapLinear)
 
     def make_node(animated_texture_model):     # makes a node out of AnimatedTextureModel object, handles loading models and textures and caches
       load_model(animated_texture_model.model_name)
@@ -189,17 +189,21 @@ class MyApp(ShowBase, DirectObject.DirectObject):
       textures_for_node = []
       
       for texture_name in animated_texture_model.texture_names:
-        load_texture(texture_name)
-        textures_for_node.append(textures[texture_name])
+        if len(texture_name) != 0:
+          load_texture(texture_name)
+          textures_for_node.append(textures[texture_name])
       
       framerate = animated_texture_model.framerate
       
-      if len(textures_for_node) == 1:
+      if len(textures_for_node) in [0,1]:
         node = PandaNode("node")
         node_path = NodePath(node)
         result = NodePath(node_path)
         model.instanceTo(node_path)
-        node_path.setTexture(textures_for_node[0])
+        
+        if len(textures_for_node) == 1:
+          node_path.setTexture(textures_for_node[0])
+        
         return node
       else:  # node with animated texture
         sequence_node = SequenceNode("sequence")
@@ -264,7 +268,7 @@ class MyApp(ShowBase, DirectObject.DirectObject):
     for prop in level.get_props():
       tile_node_path = level_node_path.attachNewNode(make_node(prop.model))
       tile_node_path.setPos(prop.position[0] - half_width - 0.5,0,prop.position[1] - half_height - 0.5)
-      tile_node_path.setHpr(prop.orientation,0,0)
+      tile_node_path.setHpr(0,0,prop.orientation)
 
     skybox_texture_names = level.get_skybox_textures()
     
