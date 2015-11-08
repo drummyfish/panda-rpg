@@ -5,6 +5,9 @@ from direct.actor.Actor import Actor
 from panda3d.core import *
 from pandac.PandaModules import WindowProperties
 from direct.showbase import DirectObject
+from direct.filter.CommonFilters import CommonFilters
+from pandac.PandaModules import ClockObject
+from panda3d.core import ConfigVariableBool
 
 from level import *
 
@@ -15,6 +18,9 @@ class Game(ShowBase, DirectObject.DirectObject):
   JUMP_EXTRA_HEIGHT = 0.3
   
   def __init__(self):
+    vsync = ConfigVariableBool("sync-video")
+    vsync.setValue(False)
+    
     ShowBase.__init__(self)
 
     self.daytime = 0.0                                              ##< time of day in range <0,1>
@@ -32,6 +38,9 @@ class Game(ShowBase, DirectObject.DirectObject):
     props = WindowProperties()
     props.setCursorHidden(True) 
     base.win.requestProperties(props)
+
+    #self.filters = CommonFilters(base.win,base.cam)   
+    #self.filters.setBloom(size="small")
 
     # initialise input handling:
 
@@ -419,6 +428,7 @@ class Game(ShowBase, DirectObject.DirectObject):
     render.setLight(ambient_light_path)
     
     directional_light = DirectionalLight('diffuse')
+    
     directional_light_path = render.attachNewNode(directional_light)
     directional_light.setColor(VBase4(0.7,0.7,0.7,1))
     directional_light_path.setHpr(10, -45, 0)
