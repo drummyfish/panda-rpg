@@ -8,18 +8,24 @@ from direct.showbase import DirectObject
 
 from level import *
 
-class MyApp(ShowBase, DirectObject.DirectObject):
-  DAYTIME_UPDATE_COUNTER = 2                    
+class Game(ShowBase, DirectObject.DirectObject):
+  DAYTIME_UPDATE_COUNTER = 2
+  JUMP_DURATION = 0.6                                               ##< jump duration in seconds
+  CAMERA_HEIGHT = 0.7
+  JUMP_EXTRA_HEIGHT = 0.3
   
   def __init__(self):
     ShowBase.__init__(self)
 
     self.daytime = 0.0                                              ##< time of day in range <0,1>
-    self.update_daytime_counter = MyApp.DAYTIME_UPDATE_COUNTER      ##< counts frames to update daytime effects to increase FPS
+    self.update_daytime_counter = Game.DAYTIME_UPDATE_COUNTER       ##< counts frames to update daytime effects to increase FPS
     self.collision_mask = None                                      ##< current level collision mask (2D list of bool)
 
     self.player_position = [0.0,0.0]                                ##< player position
     self.player_rotation = 0.0                                      ##< player rotation in degrees
+
+    self.time_of_jump = - 0.100                                     ##< time of last player's jump
+    self.in_air = False                                             ##< if the player is in air (jumping)
 
     base.setFrameRateMeter(True)
  
@@ -74,7 +80,7 @@ class MyApp(ShowBase, DirectObject.DirectObject):
       self.update_daytime_counter -= 1
       return task.cont
     else:
-      self.update_daytime_counter = MyApp.DAYTIME_UPDATE_COUNTER
+      self.update_daytime_counter = Game.DAYTIME_UPDATE_COUNTER
     
     self.set_daytime(self.daytime)
     return task.cont
@@ -176,6 +182,8 @@ class MyApp(ShowBase, DirectObject.DirectObject):
 
     distance = self.camera_movement_speed * time_difference
 
+    self.in_air = task.time <= self.time_of_jump + Game.JUMP_DURATION
+
     if self.input_state["w"]:
       self.player_position = self.move_with_collisions(self.player_position,self.player_rotation,distance)
 
@@ -187,7 +195,10 @@ class MyApp(ShowBase, DirectObject.DirectObject):
 
     if self.input_state["d"]:
       self.player_position = self.move_with_collisions(self.player_position,self.player_rotation + 270,distance)
-      
+    
+    if not self.in_air and self.input_state["e"]:
+      self.time_of_jump = task.time
+    
     if self.input_state["mouse1"]:
       current_rotation = self.camera.getHpr()
       current_position = self.camera.getPos()
@@ -209,7 +220,16 @@ class MyApp(ShowBase, DirectObject.DirectObject):
       
       self.camera.setHpr(new_rotation[0],new_rotation[1],new_rotation[2])
 
-    self.camera.setPos(self.player_position[1],self.player_position[0],0.7)
+    camera_height = Game.CAMERA_HEIGHT
+    
+    if self.in_air:
+      jump_phase = (task.time - self.time_of_jump) / Game.JUMP_DURATION
+      
+      camera_height += Game.JUMP_EXTRA_HEIGHT * (1 - (jump_phase * 2 - 1) ** 2)
+      
+     
+
+    self.camera.setPos(self.player_position[1],self.player_position[0],camera_height)
 
     return task.cont
 
@@ -410,5 +430,5 @@ class MyApp(ShowBase, DirectObject.DirectObject):
 
     self.set_daytime(0.5)
 
-app = MyApp()
+app = Game()
 app.run()
