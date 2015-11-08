@@ -9,7 +9,7 @@ from direct.showbase import DirectObject
 from level import *
 
 class MyApp(ShowBase, DirectObject.DirectObject):
-  DAYTIME_UPDATE_COUNTER = 2
+  DAYTIME_UPDATE_COUNTER = 2                    
   
   def __init__(self):
     ShowBase.__init__(self)
@@ -30,7 +30,7 @@ class MyApp(ShowBase, DirectObject.DirectObject):
     # initialise input handling:
 
     self.camera_time_before = 0
-    self.camera_movement_speed = 5
+    self.camera_movement_speed = 4
     self.camera_rotation_speed = 2000
 
     base.disableMouse()
@@ -87,13 +87,81 @@ class MyApp(ShowBase, DirectObject.DirectObject):
   #  @param distance distance to be travelled
   #  @return new position as a tuple
   
-  def move_with_collisions(self, position, direction, distance):
+  def move_with_collisions(self, position, direction, distance):    
+    padding_size = 0.2
+    bias = 0.01
+
+    def position_to_tile(float_position):
+      return (int(round(float_position[0])),int(round(float_position[1])))
+    
+    def tile_is_walkable(tile_position):
+      try:
+        return self.collision_mask[tile_position[0]][tile_position[1]]
+      except Exception:
+        return False
+    
+    def position_collides(float_position):
+      # Checks if position collides taking padding into account. Returns list of
+      # collided paddings:
+      #      0
+      #    1   3    
+      #      2
+      # Empty list is returned for no collision.
+      
+      tile_position = position_to_tile(float_position)
+      
+      result = []
+      
+      if not tile_is_walkable(tile_position):
+        return [0,1,2,3]
+      
+      position_within_tile = (float_position[0] - tile_position[0] + 0.5,float_position[1] - tile_position[1] + 0.5)
+      
+      if position_within_tile[0] < padding_size and not tile_is_walkable((tile_position[0] - 1,tile_position[1])):
+        result.append(1)
+      elif position_within_tile[0] > 1.0 - padding_size and not tile_is_walkable((tile_position[0] + 1,tile_position[1])):
+        result.append(3)
+      
+      elif position_within_tile[1] < padding_size and not tile_is_walkable((tile_position[0],tile_position[1] - 1)):
+        result.append(0)
+      elif position_within_tile[1] > 1.0 - padding_size and not tile_is_walkable((tile_position[0],tile_position[1] + 1)):
+        result.append(2)
+      
+      return result
+    
     new_position = [position[0],position[1]]
+    
+    direction = direction % 360
     
     new_position[0] += cos(radians(direction)) * distance
     new_position[1] -= sin(radians(direction)) * distance
     
-    return new_position
+    collisions = position_collides(new_position)
+    
+    if len(collisions) == 0:   # no collision for new position => OK
+      return new_position
+    
+    current_tile = position_to_tile(position)
+    
+    if 3 in collisions:
+      new_position[0] = current_tile[0] + 0.5 - padding_size - bias
+    elif 1 in collisions:
+      new_position[0] = current_tile[0] - 0.5 + padding_size + bias
+    
+    collisions = position_collides(new_position)
+    
+    if len(collisions) == 0:   # no collision for new position => OK
+      return new_position
+    
+    if 0 in collisions:
+      new_position[1] = current_tile[1] - 0.5 + padding_size + bias
+    elif 2 in collisions:
+      new_position[1] = current_tile[1] + 0.5 - padding_size - bias
+    
+    if len(position_collides(new_position)) == 0:
+      return new_position
+    
+    return position
   
   def camera_task(self, task):
     current_position = self.camera.getPos()
@@ -109,19 +177,17 @@ class MyApp(ShowBase, DirectObject.DirectObject):
     distance = self.camera_movement_speed * time_difference
 
     if self.input_state["w"]:
-      new_position = self.move_with_collisions(self.player_position,self.player_rotation,distance)
+      self.player_position = self.move_with_collisions(self.player_position,self.player_rotation,distance)
 
     if self.input_state["s"]:
-      new_position = self.move_with_collisions(self.player_position,self.player_rotation + 180,distance)
+      self.player_position = self.move_with_collisions(self.player_position,self.player_rotation + 180,distance)
 
     if self.input_state["a"]:
-      new_position = self.move_with_collisions(self.player_position,self.player_rotation + 90,distance)
+      self.player_position = self.move_with_collisions(self.player_position,self.player_rotation + 90,distance)
 
     if self.input_state["d"]:
-      new_position = self.move_with_collisions(self.player_position,self.player_rotation + 270,distance)
-
-    self.player_position = new_position
-
+      self.player_position = self.move_with_collisions(self.player_position,self.player_rotation + 270,distance)
+      
     if self.input_state["mouse1"]:
       current_rotation = self.camera.getHpr()
       current_position = self.camera.getPos()
@@ -251,7 +317,7 @@ class MyApp(ShowBase, DirectObject.DirectObject):
         return sequence_node
 
     base.camLens.setFov(105)       # setup the camera
-    base.camLens.setNear(0.1)
+    base.camLens.setNear(0.01)
     base.camLens.setFar(25)
     
     fog = Fog("fog")
