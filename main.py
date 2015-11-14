@@ -187,6 +187,7 @@ class Game(ShowBase, DirectObject.DirectObject):
     new_position = [self.player_position[0],self.player_position[1]]
 
     time_difference = task.time - self.camera_time_before
+    
     self.camera_time_before = task.time
 
     distance = self.camera_movement_speed * time_difference
@@ -429,23 +430,31 @@ class Game(ShowBase, DirectObject.DirectObject):
     ambient_light.setColor(VBase4(level.get_ambient_light_amount(),level.get_ambient_light_amount(),level.get_ambient_light_amount(),1))
     render.setLight(ambient_light_path)
     
-    directional_light = DirectionalLight('diffuse')
+    #directional_light = DirectionalLight('diffuse')
+    directional_light = Spotlight('diffuse')
     
-    
-    directional_light_path = render.attachNewNode(directional_light)
+  #  directional_light_path = self.render.attachNewNode(directional_light)
+  
+  
     directional_light_path = self.camera.attachNewNode(directional_light)
+  #  directional_light_path.setHpr(0.922876, -56.806, 0)
+    directional_light_path.setHpr(0, -90, 0)
+    
+    directional_light_path.setPos(0, 0, 200)
+    directional_light.setExponent(0)
+    directional_light.getLens().setFov(10)
+    directional_light.getLens().setNearFar(150,250)    
+    directional_light_path.set_compass()
     
     directional_light.setColor(VBase4(0.7,0.7,0.7,1))
-    directional_light_path.setHpr(0.922876, -56.806, 0)
-    directional_light_path.setPos(14.6473, 7.92642, 1)
+  #  directional_light_path.setHpr(0.922876, -56.806, 0)
+  #  directional_light_path.setPos(14.6473, 7.92642, 50)
     render.setLight(directional_light_path)
 
     self.diffuse_lights = level.get_diffuse_lights()
     self.ambient_light_amount = level.get_ambient_light_amount()
 
-
-    directional_light.setShadowCaster(True)
-    directional_light.getLens().setNearFar(1,200)
+    directional_light.setShadowCaster(True,1024,1024)
     self.render.setShaderAuto()
 
     self.set_daytime(0.5)
