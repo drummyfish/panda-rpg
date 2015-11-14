@@ -12,7 +12,7 @@ from panda3d.core import ConfigVariableBool
 from level import *
 
 class Game(ShowBase, DirectObject.DirectObject):
-  DAYTIME_UPDATE_COUNTER = 2
+  DAYTIME_UPDATE_COUNTER = 128
   JUMP_DURATION = 0.6                                               ##< jump duration in seconds
   CAMERA_HEIGHT = 0.7
   JUMP_EXTRA_HEIGHT = 0.3
@@ -180,7 +180,7 @@ class Game(ShowBase, DirectObject.DirectObject):
   
   def camera_task(self, task):
     current_position = self.camera.getPos()
-
+   
     camera_forward = self.camera.getRelativeVector(self.render,VBase3(0,1,0))
     camera_right = self.camera.getRelativeVector(self.render,VBase3(1,0,0))
 
@@ -244,7 +244,9 @@ class Game(ShowBase, DirectObject.DirectObject):
 
   ## Sets the time of the day as a value in interval <0,1> to affect the scene (lighting, skybox texture, ...).
 
-  def set_daytime(self, daytime):
+  def set_daytime(self, daytime):    
+    # TODO: HUGELY OPTIMISE THIS
+    
     skybox_node = self.render.find("**/skybox")
     
     if not skybox_node.isEmpty():      # handle skybox, if there is any
@@ -429,14 +431,22 @@ class Game(ShowBase, DirectObject.DirectObject):
     
     directional_light = DirectionalLight('diffuse')
     
+    
     directional_light_path = render.attachNewNode(directional_light)
+    directional_light_path = self.camera.attachNewNode(directional_light)
+    
     directional_light.setColor(VBase4(0.7,0.7,0.7,1))
-    directional_light_path.setHpr(10, -45, 0)
-    directional_light_path.setPos(-4, 10, 1)
+    directional_light_path.setHpr(0.922876, -56.806, 0)
+    directional_light_path.setPos(14.6473, 7.92642, 1)
     render.setLight(directional_light_path)
 
     self.diffuse_lights = level.get_diffuse_lights()
     self.ambient_light_amount = level.get_ambient_light_amount()
+
+
+    directional_light.setShadowCaster(True)
+    directional_light.getLens().setNearFar(1,200)
+    self.render.setShaderAuto()
 
     self.set_daytime(0.5)
 
