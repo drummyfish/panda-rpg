@@ -23,6 +23,11 @@ class Game(ShowBase, DirectObject.DirectObject):
     
     ShowBase.__init__(self)
 
+    FPS = 60
+    globalClock = ClockObject.getGlobalClock()
+    globalClock.setMode(ClockObject.MLimited)
+    globalClock.setFrameRate(FPS)
+
     self.daytime = 0.0                                              ##< time of day in range <0,1>
     self.update_daytime_counter = Game.DAYTIME_UPDATE_COUNTER       ##< counts frames to update daytime effects to increase FPS
     self.collision_mask = None                                      ##< current level collision mask (2D list of bool)
@@ -46,7 +51,7 @@ class Game(ShowBase, DirectObject.DirectObject):
 
     self.camera_time_before = 0
     self.camera_movement_speed = 4
-    self.camera_rotation_speed = 2000
+    self.camera_rotation_speed = 0.3
 
     base.disableMouse()
 
@@ -58,6 +63,8 @@ class Game(ShowBase, DirectObject.DirectObject):
 
     self.input_state["mx"] = 0
     self.input_state["my"] = 0
+    self.input_state["mxf"] = 0.0
+    self.input_state["myf"] = 0.0
 
     for key in ["w","s","a","d","q","e","mouse1","mouse3"]:
       self.input_state[key] = False
@@ -76,23 +83,27 @@ class Game(ShowBase, DirectObject.DirectObject):
     if base.mouseWatcherNode.hasMouse():
       x = base.mouseWatcherNode.getMouseX()
       y = base.mouseWatcherNode.getMouseY()
-
-      self.input_state["mx"] = x
-      self.input_state["my"] = y
+      
+      size = base.getSize()
+      
+      self.input_state["mxf"] = x   # float
+      self.input_state["myf"] = y   
+      
+      self.input_state["mx"] = int(x * size[0] / 2)   # pixel
+      self.input_state["my"] = int(y * size[1] / 2)
 
     return task.cont
 
   def time_task(self, task):
-    self.daytime = (task.time / 10) % 1
-    
+    self.daytime = (task.time / 30) % 1
+
     if self.update_daytime_counter > 0:
       self.update_daytime_counter -= 1
       return task.cont
     else:
       self.update_daytime_counter = Game.DAYTIME_UPDATE_COUNTER
-    
-    self.set_daytime(self.daytime)
-    return task.cont
+      self.set_daytime(self.daytime)
+      return task.cont
   
   ## Computes a new position of object in movement, respecting the
   #  collisions with level geometry.
@@ -222,11 +233,10 @@ class Game(ShowBase, DirectObject.DirectObject):
       
       mouse_difference = (self.input_state["mx"],self.input_state["my"])
       
-      if abs(mouse_difference[0]) > 0.001:
-        new_rotation[0] -= mouse_difference[0] * self.camera_rotation_speed * time_difference
+      
+      new_rotation[0] -= mouse_difference[0] * self.camera_rotation_speed
           
-      if abs(mouse_difference[1]) > 0.001:
-        new_rotation[1] += mouse_difference[1] * self.camera_rotation_speed * time_difference
+      new_rotation[1] += mouse_difference[1] * self.camera_rotation_speed 
       
       self.camera.setHpr(new_rotation[0],new_rotation[1],new_rotation[2])
 
@@ -347,16 +357,16 @@ class Game(ShowBase, DirectObject.DirectObject):
         sequence_node.loop(True)
       
         return sequence_node
-
-    base.camLens.setFov(105)       # setup the camera
-    base.camLens.setNear(0.01)
-    base.camLens.setFar(25)
     
     fog = Fog("fog")
     fog_color = level.get_fog_color()
     fog.setColor(fog_color[0],fog_color[1],fog_color[2])
     fog.setExpDensity(0.1)
-    fog.setLinearRange(level.get_fog_distance(),level.get_fog_distance() + 10)  
+    fog.setLinearRange(level.get_fog_distance(),level.get_fog_distance() + 5)  
+
+    base.camLens.setFov(105)       # setup the camera
+    base.camLens.setNear(0.01)
+    base.camLens.setFar(level.get_fog_distance() + 10)
     
     level_node_path = NodePath("level")
     level_node_path.reparentTo(self.render)
@@ -430,31 +440,20 @@ class Game(ShowBase, DirectObject.DirectObject):
     ambient_light.setColor(VBase4(level.get_ambient_light_amount(),level.get_ambient_light_amount(),level.get_ambient_light_amount(),1))
     render.setLight(ambient_light_path)
     
-    #directional_light = DirectionalLight('diffuse')
-    directional_light = Spotlight('diffuse')
-    
-  #  directional_light_path = self.render.attachNewNode(directional_light)
-  
-  
+    directional_light = DirectionalLight('diffuse')
     directional_light_path = self.camera.attachNewNode(directional_light)
-  #  directional_light_path.setHpr(0.922876, -56.806, 0)
-    directional_light_path.setHpr(0, -90, 0)
-    
-    directional_light_path.setPos(0, 0, 200)
-    directional_light.setExponent(0)
-    directional_light.getLens().setFov(10)
-    directional_light.getLens().setNearFar(150,250)    
+    directional_light_path.setHpr(0,-90,0)   
+    directional_light_path.setPos(0,0,20)
+    directional_light.getLens().setNearFar(10,30)   
+    directional_light.getLens().setFilmSize(10,10)
     directional_light_path.set_compass()
-    
     directional_light.setColor(VBase4(0.7,0.7,0.7,1))
-  #  directional_light_path.setHpr(0.922876, -56.806, 0)
-  #  directional_light_path.setPos(14.6473, 7.92642, 50)
     render.setLight(directional_light_path)
 
     self.diffuse_lights = level.get_diffuse_lights()
     self.ambient_light_amount = level.get_ambient_light_amount()
 
-    directional_light.setShadowCaster(True,1024,1024)
+    directional_light.setShadowCaster(True,256,256)
     self.render.setShaderAuto()
 
     self.set_daytime(0.5)
