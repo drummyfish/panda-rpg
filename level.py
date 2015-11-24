@@ -63,6 +63,7 @@ class LevelProp:
 class Level:
   ## Class static method, saves the level into given file.
   
+  @staticmethod
   def save_to_file(level, filename):
     output_file = open(filename,"w")
     pickle.dump(level,output_file)
@@ -72,7 +73,8 @@ class Level:
   #  the level argument has to be there because of python interpreter
   #  for some reason.
   
-  def load_from_file(level, filename):
+  @staticmethod
+  def load_from_file(filename):
     input_file = open(filename,"r")
     result = pickle.load(input_file)
     input_file.close()

@@ -32,7 +32,7 @@ class Editor(Frame):
     if len(filename) == 0:
       return
     
-    self.level = Level.load_from_file(self.level,"test_output.txt")
+    self.level = Level.load_from_file("test_output.txt")
     self.selected_tile = None
     self.redraw_level()
    

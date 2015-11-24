@@ -71,7 +71,7 @@ class Game(ShowBase, DirectObject.DirectObject):
       self.accept(key,self.handle_input,[key,True])
       self.accept(key + "-up",self.handle_input,[key,False])
 
-    level = Level.load_from_file(Level(1,1),"test_output.txt")
+    level = Level.load_from_file("test_output.txt")
     
     self.collision_mask = level.get_collision_mask()
     self.setup_environment_scene(level)
