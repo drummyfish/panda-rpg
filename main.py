@@ -23,6 +23,13 @@ class Game(ShowBase, DirectObject.DirectObject):
     
     ShowBase.__init__(self)
 
+    props = WindowProperties() 
+    props.setSize(1024,768) 
+    props.setCursorHidden(True) 
+    props.setMouseMode(WindowProperties.M_relative)
+
+    base.win.requestProperties(props) 
+
     FPS = 60
     globalClock = ClockObject.getGlobalClock()
     globalClock.setMode(ClockObject.MLimited)
@@ -39,10 +46,6 @@ class Game(ShowBase, DirectObject.DirectObject):
     self.in_air = False                                             ##< if the player is in air (jumping)
 
     base.setFrameRateMeter(True)
- 
-    props = WindowProperties()
-    props.setCursorHidden(True) 
-    base.win.requestProperties(props)
 
     #self.filters = CommonFilters(base.win,base.cam)   
     #self.filters.setBloom(size="small")
@@ -96,7 +99,9 @@ class Game(ShowBase, DirectObject.DirectObject):
 
   def time_task(self, task):
     self.daytime = (task.time / 30) % 1
-
+    
+    return task.cont
+    
     if self.update_daytime_counter > 0:
       self.update_daytime_counter -= 1
       return task.cont
@@ -220,25 +225,22 @@ class Game(ShowBase, DirectObject.DirectObject):
     if not self.in_air and self.input_state["e"]:
       self.time_of_jump = task.time
     
-    if self.input_state["mouse1"]:
-      current_rotation = self.camera.getHpr()
-      current_position = self.camera.getPos()
+    current_rotation = self.camera.getHpr()
+    current_position = self.camera.getPos()
       
-      self.player_rotation = current_rotation[0] % 360
+    self.player_rotation = current_rotation[0] % 360
       
-      new_rotation = [current_rotation.getX(),current_rotation.getY(),current_rotation.getZ()] 
+    new_rotation = [current_rotation.getX(),current_rotation.getY(),current_rotation.getZ()] 
 
-      window_center = (base.win.getXSize() / 2, base.win.getYSize() / 2)
-      base.win.movePointer(0, window_center[0], window_center[1])
+    window_center = (base.win.getXSize() / 2, base.win.getYSize() / 2)
+    base.win.movePointer(0, window_center[0], window_center[1])
       
-      mouse_difference = (self.input_state["mx"],self.input_state["my"])
+    mouse_difference = (self.input_state["mx"],self.input_state["my"])
       
-      
-      new_rotation[0] -= mouse_difference[0] * self.camera_rotation_speed
-          
-      new_rotation[1] += mouse_difference[1] * self.camera_rotation_speed 
-      
-      self.camera.setHpr(new_rotation[0],new_rotation[1],new_rotation[2])
+    new_rotation[0] -= mouse_difference[0] * self.camera_rotation_speed
+    new_rotation[1] += mouse_difference[1] * self.camera_rotation_speed 
+    
+    self.camera.setHpr(new_rotation[0],max(min(new_rotation[1],90),-90),new_rotation[2])
 
     camera_height = Game.CAMERA_HEIGHT
     
