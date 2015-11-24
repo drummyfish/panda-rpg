@@ -12,7 +12,7 @@ from panda3d.core import ConfigVariableBool
 from level import *
 
 class Game(ShowBase, DirectObject.DirectObject):
-  DAYTIME_UPDATE_COUNTER = 128
+  DAYTIME_UPDATE_COUNTER = 32
   JUMP_DURATION = 0.6                                               ##< jump duration in seconds
   CAMERA_HEIGHT = 0.7
   JUMP_EXTRA_HEIGHT = 0.3
@@ -99,8 +99,6 @@ class Game(ShowBase, DirectObject.DirectObject):
 
   def time_task(self, task):
     self.daytime = (task.time / 30) % 1
-    
-    return task.cont
     
     if self.update_daytime_counter > 0:
       self.update_daytime_counter -= 1
@@ -259,10 +257,19 @@ class Game(ShowBase, DirectObject.DirectObject):
 
   def set_daytime(self, daytime):    
     # TODO: HUGELY OPTIMISE THIS
+
+    try:
+      self.skybox_node = self.skybox_node
+      self.diffuse_light_node = self.diffuse_light_node
+      self.ambient_light_node = self.ambient_light_node
+      self.skybox_blend_ratio_before = self.skybox_blend_ratio_before
+    except Exception:
+      self.skybox_node = self.render.find("**/skybox")
+      self.diffuse_light_node = self.render.find("**/diffuse")
+      self.ambient_light_node = self.render.find("**/ambient")
+      self.skybox_blend_ratio_before = 0.0
     
-    skybox_node = self.render.find("**/skybox")
-    
-    if not skybox_node.isEmpty():      # handle skybox, if there is any
+    if not self.skybox_node.isEmpty():      # handle skybox, if there is any
       texture_index = int(len(self.skybox_textures) * self.daytime)
       fraction = 1.0 / len(self.skybox_textures)
       remainder = self.daytime - fraction * texture_index
@@ -278,16 +285,15 @@ class Game(ShowBase, DirectObject.DirectObject):
       else:
         ratio = 1.0
     
-      skybox_node.setTexture(self.skybox_texture_stage1,self.skybox_textures[texture_index])
-      skybox_node.setTexture(self.skybox_texture_stage2,self.skybox_textures[(texture_index + 1) % len(self.skybox_textures)])
-      self.skybox_texture_stage2.setColor(Vec4(ratio,ratio,ratio,ratio))
+      if self.skybox_blend_ratio_before != ratio:
+        self.current_skybox_texture_index = texture_index
+        self.skybox_node.setTexture(self.skybox_texture_stage1,self.skybox_textures[texture_index])
+        self.skybox_node.setTexture(self.skybox_texture_stage2,self.skybox_textures[(texture_index + 1) % len(self.skybox_textures)])
+        self.skybox_texture_stage2.setColor(Vec4(ratio,ratio,ratio,ratio))
+      
+    # set lights:
     
-    # set diffuse light:
-    
-    diffuse_light_node = self.render.find("**/diffuse")
-    ambient_light_node = self.render.find("**/ambient")
-    
-    if diffuse_light_node.isEmpty() or ambient_light_node.isEmpty():
+    if self.diffuse_light_node.isEmpty() or self.ambient_light_node.isEmpty():
       return
     
     light_index = int(len(self.diffuse_lights) * self.daytime)
@@ -301,10 +307,10 @@ class Game(ShowBase, DirectObject.DirectObject):
 
     light_color = (color1[0] * one_minus_ratio + color2[0] * ratio,color1[1] * one_minus_ratio + color2[1] * ratio,color1[2] * one_minus_ratio + color2[2] * ratio)
     
-    diffuse_light_node.node().setColor(VBase4(light_color[0],light_color[1],light_color[2],1))
+    self.diffuse_light_node.node().setColor(VBase4(light_color[0],light_color[1],light_color[2],1))
 
     ambient_color = (light_color[0] * self.ambient_light_amount, light_color[1] * self.ambient_light_amount, light_color[2] * self.ambient_light_amount)
-    ambient_light_node.node().setColor(VBase4(ambient_color[0],ambient_color[1],ambient_color[2],1))
+    self.ambient_light_node.node().setColor(VBase4(ambient_color[0],ambient_color[1],ambient_color[2],1))
 
   ## Sets up 3D environment node based on provided level layout.
 
