@@ -7,7 +7,7 @@ from pandac.PandaModules import WindowProperties
 from direct.showbase import DirectObject
 from direct.filter.CommonFilters import CommonFilters
 from pandac.PandaModules import ClockObject
-from panda3d.core import ConfigVariableBool
+from panda3d.core import ConfigVariableBool, CullBinManager
 
 from level import *
 
@@ -260,14 +260,16 @@ class Game(ShowBase, DirectObject.DirectObject):
 
     try:
       self.skybox_node = self.skybox_node
+      self.skybox2_node = self.skybox2_node
       self.diffuse_light_node = self.diffuse_light_node
       self.ambient_light_node = self.ambient_light_node
-      self.skybox_blend_ratio_before = self.skybox_blend_ratio_before
+      self.skybox_texture_index_before = self.skybox_texture_index_before
     except Exception:
       self.skybox_node = self.render.find("**/skybox")
+      self.skybox2_node = self.render.find("**/skybox2")
       self.diffuse_light_node = self.render.find("**/diffuse")
       self.ambient_light_node = self.render.find("**/ambient")
-      self.skybox_blend_ratio_before = 0.0
+      self.skybox_texture_index_before = -1
     
     if not self.skybox_node.isEmpty():      # handle skybox, if there is any
       texture_index = int(len(self.skybox_textures) * self.daytime)
@@ -285,11 +287,12 @@ class Game(ShowBase, DirectObject.DirectObject):
       else:
         ratio = 1.0
     
-      if self.skybox_blend_ratio_before != ratio:
-        self.current_skybox_texture_index = texture_index
-        self.skybox_node.setTexture(self.skybox_texture_stage1,self.skybox_textures[texture_index])
-        self.skybox_node.setTexture(self.skybox_texture_stage2,self.skybox_textures[(texture_index + 1) % len(self.skybox_textures)])
-        self.skybox_texture_stage2.setColor(Vec4(ratio,ratio,ratio,ratio))
+      self.skybox2_node.setAlphaScale(ratio)
+    
+      if texture_index != self.skybox_texture_index_before:   # switch front and back skybox
+        self.skybox_texture_index_before = texture_index
+        self.skybox_node.setTexture(self.skybox_textures[texture_index])
+        self.skybox2_node.setTexture(self.skybox_textures[(texture_index + 1) % len(self.skybox_textures)])
       
     # set lights:
     
@@ -416,21 +419,29 @@ class Game(ShowBase, DirectObject.DirectObject):
     skybox_texture_names = level.get_skybox_textures()
     
     if len(skybox_texture_names) > 0:      # no skybox textures => no skybox
+      # back skybox:
       skybox = self.loader.loadModel(RESOURCE_PATH + "skybox.obj")
       skybox.setName("skybox")
       skybox.reparentTo(self.camera)
       skybox.setHpr(0,90,0)
-      skybox.set_bin("background", 0);
-      skybox.set_depth_write(False);
+      skybox.set_bin("background",0)
+      skybox.set_depth_write(False)
       skybox.set_compass()
       skybox_material = Material()
       skybox_material.setEmission((1, 1, 1, 1))
       skybox.setMaterial(skybox_material)
+
+      # front skybox:
+      skybox2 = self.loader.loadModel(RESOURCE_PATH + "skybox.obj")
+      skybox2.setName("skybox2")
+      skybox2.reparentTo(self.camera)
+      skybox2.setHpr(0,90,0)
+      skybox2.set_bin("background",1)
+      skybox2.set_depth_write(False)
+      skybox2.set_compass()
+      skybox2.setMaterial(skybox_material)
+      skybox2.setTransparency(TransparencyAttrib.MAlpha)
   
-      self.skybox_texture_stage1 = TextureStage("ts0")
-      self.skybox_texture_stage2 = TextureStage("ts2")
-      self.skybox_texture_stage2.setCombineRgb(TextureStage.CMInterpolate,TextureStage.CSTexture,TextureStage.COSrcColor,TextureStage.CSPrevious,TextureStage.COSrcColor,TextureStage.CSConstant,TextureStage.COSrcColor)
-      self.skybox_texture_stage2.setColor(Vec4(0.5,0.5,0.5,0.5))
       self.skybox_textures = []
     
       for skybox_texture_name in skybox_texture_names:
