@@ -52,6 +52,11 @@ class Editor(Frame):
     
     self.level.set_size(int(self.get_text("width")),int(self.get_text("height")))
     self.level.set_fog_distance(float(self.get_text("fog distance")))
+    
+    fog_color = self.get_text("fog color").replace(" ", "")[1:-1].split(",")
+    fog_color = (float(fog_color[0]),float(fog_color[1]),float(fog_color[2]))
+    self.level.set_fog_color(fog_color)
+    
     self.selected_tile = None
     self.redraw_level()
     

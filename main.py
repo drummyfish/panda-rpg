@@ -98,7 +98,7 @@ class Game(ShowBase, DirectObject.DirectObject):
     return task.cont
 
   def time_task(self, task):
-    self.daytime = (task.time / 30) % 1
+    self.daytime = (task.time / 300) % 1
     
     if self.update_daytime_counter > 0:
       self.update_daytime_counter -= 1
@@ -312,6 +312,11 @@ class Game(ShowBase, DirectObject.DirectObject):
     
     self.diffuse_light_node.node().setColor(VBase4(light_color[0],light_color[1],light_color[2],1))
 
+    phase = sin(self.daytime * 2 * pi)
+
+    self.diffuse_light_node.setHpr(phase * 10,-90 + phase * 20,0)   
+    self.diffuse_light_node.setPos(0,phase * -10,20)
+
     ambient_color = (light_color[0] * self.ambient_light_amount, light_color[1] * self.ambient_light_amount, light_color[2] * self.ambient_light_amount)
     self.ambient_light_node.node().setColor(VBase4(ambient_color[0],ambient_color[1],ambient_color[2],1))
 
@@ -464,7 +469,7 @@ class Game(ShowBase, DirectObject.DirectObject):
     directional_light_path.setHpr(0,-90,0)   
     directional_light_path.setPos(0,0,20)
     directional_light.getLens().setNearFar(10,30)   
-    directional_light.getLens().setFilmSize(10,10)
+    directional_light.getLens().setFilmSize(13,13)
     directional_light_path.set_compass()
     directional_light.setColor(VBase4(0.7,0.7,0.7,1))
     render.setLight(directional_light_path)
