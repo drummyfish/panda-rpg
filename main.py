@@ -47,8 +47,8 @@ class Game(ShowBase, DirectObject.DirectObject):
 
     base.setFrameRateMeter(True)
 
-    #self.filters = CommonFilters(base.win,base.cam)   
-    #self.filters.setBloom(size="small")
+    self.filters = CommonFilters(base.win,base.cam)   
+    self.filters.setBloom(size="small",desat=1)
 
     # initialise input handling:
 
@@ -313,9 +313,12 @@ class Game(ShowBase, DirectObject.DirectObject):
     self.diffuse_light_node.node().setColor(VBase4(light_color[0],light_color[1],light_color[2],1))
 
     phase = sin(self.daytime * 2 * pi)
+    phase2 = cos(self.daytime * 2 * pi)
 
-    self.diffuse_light_node.setHpr(phase * 10,-90 + phase * 20,0)   
-    self.diffuse_light_node.setPos(0,phase * -10,20)
+    #self.diffuse_light_node.setHpr(phase * 10,-90 + phase * 20,0)   
+    
+    self.diffuse_light_node.setPos(phase2 * -5,phase * -10,20)
+    self.diffuse_light_node.lookAt(self.camera)
 
     ambient_color = (light_color[0] * self.ambient_light_amount, light_color[1] * self.ambient_light_amount, light_color[2] * self.ambient_light_amount)
     self.ambient_light_node.node().setColor(VBase4(ambient_color[0],ambient_color[1],ambient_color[2],1))
@@ -362,7 +365,6 @@ class Game(ShowBase, DirectObject.DirectObject):
       else:  # node with animated texture
         sequence_node = SequenceNode("sequence")
         sequence_node.setFrameRate(framerate)
-      
         node_path = NodePath(sequence_node)
       
         for texture in textures_for_node:
@@ -453,6 +455,7 @@ class Game(ShowBase, DirectObject.DirectObject):
         load_texture(skybox_texture_name)
         self.skybox_textures.append(textures[skybox_texture_name])
 
+    # TODO set transparency only for nodes that really need it!
     level_node_path.setTransparency(True)
     level_node_path.reparentTo(self.render)
     level_node_path.setHpr(90, 90, 0)
@@ -469,7 +472,7 @@ class Game(ShowBase, DirectObject.DirectObject):
     directional_light_path.setHpr(0,-90,0)   
     directional_light_path.setPos(0,0,20)
     directional_light.getLens().setNearFar(10,30)   
-    directional_light.getLens().setFilmSize(13,13)
+    directional_light.getLens().setFilmSize(20,20)
     directional_light_path.set_compass()
     directional_light.setColor(VBase4(0.7,0.7,0.7,1))
     render.setLight(directional_light_path)
@@ -477,7 +480,7 @@ class Game(ShowBase, DirectObject.DirectObject):
     self.diffuse_lights = level.get_diffuse_lights()
     self.ambient_light_amount = level.get_ambient_light_amount()
 
-    directional_light.setShadowCaster(True,256,256)
+    #directional_light.setShadowCaster(True,256,256)
     self.render.setShaderAuto()
 
     self.set_daytime(0.5)

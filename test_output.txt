@@ -45100,5 +45100,5 @@ sbsg10770
 F0.0
 sbasS'ambient_light_amount'
 p10965
-F0.5
+F0.75
 sb.
