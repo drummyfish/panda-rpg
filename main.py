@@ -98,7 +98,7 @@ class Game(ShowBase, DirectObject.DirectObject):
     return task.cont
 
   def time_task(self, task):
-    self.daytime = (task.time / 300) % 1
+    self.daytime = (task.time / 100) % 1
     
     if self.update_daytime_counter > 0:
       self.update_daytime_counter -= 1
@@ -375,11 +375,10 @@ class Game(ShowBase, DirectObject.DirectObject):
         sequence_node.loop(True)
       
         return sequence_node
-    
+      
     fog = Fog("fog")
     fog_color = level.get_fog_color()
     fog.setColor(fog_color[0],fog_color[1],fog_color[2])
-    fog.setExpDensity(0.1)
     fog.setLinearRange(level.get_fog_distance(),level.get_fog_distance() + 5)  
 
     base.camLens.setFov(105)       # setup the camera
@@ -437,6 +436,7 @@ class Game(ShowBase, DirectObject.DirectObject):
       skybox_material = Material()
       skybox_material.setEmission((1, 1, 1, 1))
       skybox.setMaterial(skybox_material)
+      skybox.setLightOff(1)
 
       # front skybox:
       skybox2 = self.loader.loadModel(RESOURCE_PATH + "skybox.obj")
@@ -448,6 +448,7 @@ class Game(ShowBase, DirectObject.DirectObject):
       skybox2.set_compass()
       skybox2.setMaterial(skybox_material)
       skybox2.setTransparency(TransparencyAttrib.MAlpha)
+      skybox.setLightOff(1)
   
       self.skybox_textures = []
     
@@ -476,6 +477,20 @@ class Game(ShowBase, DirectObject.DirectObject):
     directional_light_path.set_compass()
     directional_light.setColor(VBase4(0.7,0.7,0.7,1))
     render.setLight(directional_light_path)
+
+    fog_blocker = self.loader.loadModel(RESOURCE_PATH + "fog_blocker.obj")
+    fog_blocker.reparentTo(self.camera)
+    fog_blocker.setHpr(0,90,0)
+    fog_blocker.setScale(level.get_fog_distance() + 7,1,level.get_fog_distance() + 7)
+    fog_blocker.set_compass()
+  
+    fog_blocker_material = Material()
+    fog_blocker_material.setAmbient(VBase4(0,0,0,1))
+    fog_blocker_material.setEmission(VBase4(fog_color[0],fog_color[1],fog_color[2],1))
+    fog_blocker_material.setDiffuse(VBase4(0,0,0,1))
+  
+    fog_blocker.clearMaterial()
+    fog_blocker.setMaterial(fog_blocker_material)
 
     self.diffuse_lights = level.get_diffuse_lights()
     self.ambient_light_amount = level.get_ambient_light_amount()
