@@ -16,6 +16,7 @@ class Game(ShowBase, DirectObject.DirectObject):
   JUMP_DURATION = 0.6                                               ##< jump duration in seconds
   CAMERA_HEIGHT = 0.7
   JUMP_EXTRA_HEIGHT = 0.3
+  FOG_RANGE = 5
   
   def __init__(self):
     vsync = ConfigVariableBool("sync-video")
@@ -96,6 +97,9 @@ class Game(ShowBase, DirectObject.DirectObject):
       self.input_state["my"] = int(y * size[1] / 2)
 
     return task.cont
+
+  ## Updates the daytime (the variable and once every DAYTIME_UPDATE_COUNTER
+  #  updates the scene accoordingly).
 
   def time_task(self, task):
     self.daytime = (task.time / 100) % 1
@@ -199,13 +203,9 @@ class Game(ShowBase, DirectObject.DirectObject):
     camera_right = self.camera.getRelativeVector(self.render,VBase3(1,0,0))
 
     new_position = [self.player_position[0],self.player_position[1]]
-
-    time_difference = task.time - self.camera_time_before
-    
+    time_difference = task.time - self.camera_time_before    
     self.camera_time_before = task.time
-
     distance = self.camera_movement_speed * time_difference
-
     self.in_air = task.time <= self.time_of_jump + Game.JUMP_DURATION
 
     if self.input_state["w"]:
@@ -227,9 +227,7 @@ class Game(ShowBase, DirectObject.DirectObject):
     current_position = self.camera.getPos()
       
     self.player_rotation = current_rotation[0] % 360
-      
     new_rotation = [current_rotation.getX(),current_rotation.getY(),current_rotation.getZ()] 
-
     window_center = (base.win.getXSize() / 2, base.win.getYSize() / 2)
     base.win.movePointer(0, window_center[0], window_center[1])
       
@@ -244,11 +242,8 @@ class Game(ShowBase, DirectObject.DirectObject):
     
     if self.in_air:
       jump_phase = (task.time - self.time_of_jump) / Game.JUMP_DURATION
-      
       camera_height += Game.JUMP_EXTRA_HEIGHT * (1 - (jump_phase * 2 - 1) ** 2)
       
-     
-
     self.camera.setPos(self.player_position[1],self.player_position[0],camera_height)
 
     return task.cont
@@ -256,7 +251,7 @@ class Game(ShowBase, DirectObject.DirectObject):
   ## Sets the time of the day as a value in interval <0,1> to affect the scene (lighting, skybox texture, ...).
 
   def set_daytime(self, daytime):    
-    # TODO: HUGELY OPTIMISE THIS
+    # TODO: OPTIMISE THIS as it will be run frequently
 
     try:
       self.skybox_node = self.skybox_node
@@ -294,7 +289,7 @@ class Game(ShowBase, DirectObject.DirectObject):
         self.skybox_node.setTexture(self.skybox_textures[texture_index])
         self.skybox2_node.setTexture(self.skybox_textures[(texture_index + 1) % len(self.skybox_textures)])
       
-    # set lights:
+    # manage lights:
     
     if self.diffuse_light_node.isEmpty() or self.ambient_light_node.isEmpty():
       return
@@ -312,18 +307,17 @@ class Game(ShowBase, DirectObject.DirectObject):
     
     self.diffuse_light_node.node().setColor(VBase4(light_color[0],light_color[1],light_color[2],1))
 
-    phase = sin(self.daytime * 2 * pi)
-    phase2 = cos(self.daytime * 2 * pi)
-
-    #self.diffuse_light_node.setHpr(phase * 10,-90 + phase * 20,0)   
+    helper_phase = self.daytime * 2 * pi
+    sun_offset = -10 * sin(helper_phase)
+    sun_offset2 = -5 * cos(helper_phase)
     
-    self.diffuse_light_node.setPos(phase2 * -5,phase * -10,20)
+    self.diffuse_light_node.setPos(sun_offset2,sun_offset,20)
     self.diffuse_light_node.lookAt(self.camera)
 
     ambient_color = (light_color[0] * self.ambient_light_amount, light_color[1] * self.ambient_light_amount, light_color[2] * self.ambient_light_amount)
     self.ambient_light_node.node().setColor(VBase4(ambient_color[0],ambient_color[1],ambient_color[2],1))
 
-  ## Sets up 3D environment node based on provided level layout.
+  ## Sets up the 3D scene (including camera, lights etc.) provided on provided level layout.
 
   def setup_environment_scene(self, level):
     models = {}      # model cache
@@ -379,26 +373,30 @@ class Game(ShowBase, DirectObject.DirectObject):
     fog = Fog("fog")
     fog_color = level.get_fog_color()
     fog.setColor(fog_color[0],fog_color[1],fog_color[2])
-    fog.setLinearRange(level.get_fog_distance(),level.get_fog_distance() + 5)  
+    fog.setLinearRange(level.get_fog_distance(),level.get_fog_distance() + Game.FOG_RANGE)  
 
-    base.camLens.setFov(105)       # setup the camera
+    # setup the camera:
+    
+    base.camLens.setFov(105)       
     base.camLens.setNear(0.01)
-    base.camLens.setFar(level.get_fog_distance() + 10)
+    base.camLens.setFar(level.get_fog_distance() + Game.FOG_RANGE + 5)   # set far plane a little behind the fog
     
     level_node_path = NodePath("level")
     level_node_path.reparentTo(self.render)
     level_node_path.setFog(fog)
+    
+    # make the level:
     
     for j in range(level.get_height()):
       for i in range(level.get_width()):
         tile = level.get_tile(i,j)
         
         if not tile.is_empty():
-          if not tile.wall:                            # floor tile
+          if not tile.wall: # floor tile
             tile_node_path = level_node_path.attachNewNode(make_node(level.get_tile(i,j).floor_model))
             tile_node_path.setPos(i,0,j)
             tile_node_path.setHpr(0,0,level.get_tile(i,j).floor_orientation * 90)
-          else:                                                       # wall
+          else:             # wall
             offsets = [[0,0.5], [0.5,0], [-0.5,0], [0,-0.5]] # down, right, left, up
             rotations = [-90, 0, 180, 90]
             neighbours = [[0,1], [1,0], [-1,0], [0,-1]]
@@ -417,6 +415,8 @@ class Game(ShowBase, DirectObject.DirectObject):
           tile_node_path = level_node_path.attachNewNode(make_node(level.get_tile(i,j).ceiling_model))
           tile_node_path.setPos(i,level.get_tile(i,j).ceiling_height,j)
 
+    # add props to the level:
+
     for prop in level.get_props():
       tile_node_path = level_node_path.attachNewNode(make_node(prop.model))
       tile_node_path.setPos(prop.position[0] - 0.5,0,prop.position[1] - 0.5)
@@ -424,7 +424,9 @@ class Game(ShowBase, DirectObject.DirectObject):
 
     skybox_texture_names = level.get_skybox_textures()
     
-    if len(skybox_texture_names) > 0:      # no skybox textures => no skybox
+    # setup the skybox (if there are any textures, otherwise don't create it at all)
+    
+    if len(skybox_texture_names) > 0:
       # back skybox:
       skybox = self.loader.loadModel(RESOURCE_PATH + "skybox.obj")
       skybox.setName("skybox")
@@ -438,7 +440,7 @@ class Game(ShowBase, DirectObject.DirectObject):
       skybox.setMaterial(skybox_material)
       skybox.setLightOff(1)
 
-      # front skybox:
+      # front skybox, will be blend with back skybox using transparency (multitexturing is not a good solution because of low performance):
       skybox2 = self.loader.loadModel(RESOURCE_PATH + "skybox.obj")
       skybox2.setName("skybox2")
       skybox2.reparentTo(self.camera)
@@ -456,48 +458,40 @@ class Game(ShowBase, DirectObject.DirectObject):
         load_texture(skybox_texture_name)
         self.skybox_textures.append(textures[skybox_texture_name])
 
-    # TODO set transparency only for nodes that really need it!
     level_node_path.setTransparency(True)
     level_node_path.reparentTo(self.render)
-    level_node_path.setHpr(90, 90, 0)
+    level_node_path.setHpr(90,90,0)
 
-    # manage lights:
-
+    # setup the lights:
+    
     ambient_light = AmbientLight('ambient')
     ambient_light_path = render.attachNewNode(ambient_light) 
-    ambient_light.setColor(VBase4(level.get_ambient_light_amount(),level.get_ambient_light_amount(),level.get_ambient_light_amount(),1))
     render.setLight(ambient_light_path)
     
     directional_light = DirectionalLight('diffuse')
-    directional_light_path = self.camera.attachNewNode(directional_light)
-    directional_light_path.setHpr(0,-90,0)   
-    directional_light_path.setPos(0,0,20)
-    directional_light.getLens().setNearFar(10,30)   
-    directional_light.getLens().setFilmSize(20,20)
+    directional_light_path = render.attachNewNode(directional_light)
+    directional_light_path.setHpr(0,-90,0)
     directional_light_path.set_compass()
-    directional_light.setColor(VBase4(0.7,0.7,0.7,1))
     render.setLight(directional_light_path)
+
+    # setup the fog blocker (a wall behind the fog, acting as a horizon):
 
     fog_blocker = self.loader.loadModel(RESOURCE_PATH + "fog_blocker.obj")
     fog_blocker.reparentTo(self.camera)
     fog_blocker.setHpr(0,90,0)
-    fog_blocker.setScale(level.get_fog_distance() + 7,1,level.get_fog_distance() + 7)
+    fog_blocker_scale = level.get_fog_distance() + Game.FOG_RANGE + 2;
+    fog_blocker.setScale(fog_blocker_scale,1,fog_blocker_scale)
     fog_blocker.set_compass()
-  
     fog_blocker_material = Material()
     fog_blocker_material.setAmbient(VBase4(0,0,0,1))
     fog_blocker_material.setEmission(VBase4(fog_color[0],fog_color[1],fog_color[2],1))
     fog_blocker_material.setDiffuse(VBase4(0,0,0,1))
-  
-    fog_blocker.clearMaterial()
     fog_blocker.setMaterial(fog_blocker_material)
 
     self.diffuse_lights = level.get_diffuse_lights()
     self.ambient_light_amount = level.get_ambient_light_amount()
 
-    #directional_light.setShadowCaster(True,256,256)
     self.render.setShaderAuto()
-
     self.set_daytime(0.5)
 
 app = Game()
