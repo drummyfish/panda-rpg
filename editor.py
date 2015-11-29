@@ -32,7 +32,7 @@ class Editor(Frame):
     if len(filename) == 0:
       return
     
-    self.level = Level.load_from_file("test_output.txt")
+    self.level = Level.load_from_file(filename)
     self.selected_tile = None
     self.redraw_level()
    
@@ -193,7 +193,7 @@ class Editor(Frame):
     return result
     
   def string_to_list(self, input_string):
-    return input_string.split(";")
+    return [] if len(input_string.strip()) == 0 else input_string.split(";")
     
   ## Updates the info in GUI, i.e. selected tile information etc.
     

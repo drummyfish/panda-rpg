@@ -75,7 +75,7 @@ class Game(ShowBase, DirectObject.DirectObject):
       self.accept(key,self.handle_input,[key,True])
       self.accept(key + "-up",self.handle_input,[key,False])
 
-    level = Level.load_from_file("test_output.txt")
+    level = Level.load_from_file("test_interior.txt")
     
     self.collision_mask = level.get_collision_mask()
     self.setup_environment_scene(level)
@@ -306,14 +306,6 @@ class Game(ShowBase, DirectObject.DirectObject):
     light_color = (color1[0] * one_minus_ratio + color2[0] * ratio,color1[1] * one_minus_ratio + color2[1] * ratio,color1[2] * one_minus_ratio + color2[2] * ratio)
     
     self.diffuse_light_node.node().setColor(VBase4(light_color[0],light_color[1],light_color[2],1))
-
-    helper_phase = self.daytime * 2 * pi
-    sun_offset = -10 * sin(helper_phase)
-    sun_offset2 = -5 * cos(helper_phase)
-    
-    self.diffuse_light_node.setPos(sun_offset2,sun_offset,20)
-    self.diffuse_light_node.lookAt(self.camera)
-
     ambient_color = (light_color[0] * self.ambient_light_amount, light_color[1] * self.ambient_light_amount, light_color[2] * self.ambient_light_amount)
     self.ambient_light_node.node().setColor(VBase4(ambient_color[0],ambient_color[1],ambient_color[2],1))
 
