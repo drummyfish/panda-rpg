@@ -8,6 +8,7 @@ from direct.showbase import DirectObject
 from direct.filter.CommonFilters import CommonFilters
 from pandac.PandaModules import ClockObject
 from panda3d.core import ConfigVariableBool, CullBinManager
+from direct.gui.OnscreenText import OnscreenText
 
 from level import *
 
@@ -75,7 +76,7 @@ class Game(ShowBase, DirectObject.DirectObject):
       self.accept(key,self.handle_input,[key,True])
       self.accept(key + "-up",self.handle_input,[key,False])
 
-    level = Level.load_from_file("test_interior.txt")
+    level = Level.load_from_file("test_exterior.txt")
     
     self.collision_mask = level.get_collision_mask()
     self.setup_environment_scene(level)
@@ -246,6 +247,19 @@ class Game(ShowBase, DirectObject.DirectObject):
       
     self.camera.setPos(self.player_position[1],self.player_position[0],camera_height)
 
+    # handle ray picking:
+
+    self.picker_ray.setFromLens(base.camNode,0,0)
+ 
+    self.collission_traverser.traverse(self.level_node_path)
+    
+    if self.collission_handler.getNumEntries() > 0:
+      self.collission_handler.sortEntries()
+      picked_object = self.collission_handler.getEntry(0).getIntoNodePath()
+      
+      print(self.collission_handler.getNumEntries())
+      print(picked_object)
+
     return task.cont
 
   ## Sets the time of the day as a value in interval <0,1> to affect the scene (lighting, skybox texture, ...).
@@ -373,9 +387,9 @@ class Game(ShowBase, DirectObject.DirectObject):
     base.camLens.setNear(0.01)
     base.camLens.setFar(level.get_fog_distance() + Game.FOG_RANGE + 5)   # set far plane a little behind the fog
     
-    level_node_path = NodePath("level")
-    level_node_path.reparentTo(self.render)
-    level_node_path.setFog(fog)
+    self.level_node_path = NodePath("level")
+    self.level_node_path.reparentTo(self.render)
+    self.level_node_path.setFog(fog)
     
     # make the level:
     
@@ -385,7 +399,7 @@ class Game(ShowBase, DirectObject.DirectObject):
         
         if not tile.is_empty():
           if not tile.wall: # floor tile
-            tile_node_path = level_node_path.attachNewNode(make_node(level.get_tile(i,j).floor_model))
+            tile_node_path = self.level_node_path.attachNewNode(make_node(level.get_tile(i,j).floor_model))
             tile_node_path.setPos(i,0,j)
             tile_node_path.setHpr(0,0,level.get_tile(i,j).floor_orientation * 90)
           else:             # wall
@@ -399,18 +413,18 @@ class Game(ShowBase, DirectObject.DirectObject):
               if level.is_wall(i + neighbours[k][0],j + neighbours[k][1]):
                 continue
 
-              tile_node_path = level_node_path.attachNewNode(make_node(level.get_tile(i,j).wall_model))
+              tile_node_path = self.level_node_path.attachNewNode(make_node(level.get_tile(i,j).wall_model))
               tile_node_path.setPos(i + offsets[k][0],0,j + offsets[k][1])
               tile_node_path.setHpr(0,0,rotations[k])
 
         if level.get_tile(i,j).ceiling:
-          tile_node_path = level_node_path.attachNewNode(make_node(level.get_tile(i,j).ceiling_model))
+          tile_node_path = self.level_node_path.attachNewNode(make_node(level.get_tile(i,j).ceiling_model))
           tile_node_path.setPos(i,level.get_tile(i,j).ceiling_height,j)
 
     # add props to the level:
 
     for prop in level.get_props():
-      tile_node_path = level_node_path.attachNewNode(make_node(prop.model))
+      tile_node_path = self.level_node_path.attachNewNode(make_node(prop.model))
       tile_node_path.setPos(prop.position[0] - 0.5,0,prop.position[1] - 0.5)
       tile_node_path.setHpr(0,0,prop.orientation)
 
@@ -450,9 +464,9 @@ class Game(ShowBase, DirectObject.DirectObject):
         load_texture(skybox_texture_name)
         self.skybox_textures.append(textures[skybox_texture_name])
 
-    level_node_path.setTransparency(True)
-    level_node_path.reparentTo(self.render)
-    level_node_path.setHpr(90,90,0)
+    self.level_node_path.setTransparency(True)
+    self.level_node_path.reparentTo(self.render)
+    self.level_node_path.setHpr(90,90,0)
 
     # setup the lights:
     
@@ -485,6 +499,22 @@ class Game(ShowBase, DirectObject.DirectObject):
 
     self.render.setShaderAuto()
     self.set_daytime(0.5)
+    
+    # setup ray picker:
+    
+    self.collission_traverser = CollisionTraverser()
+    self.collission_handler = CollisionHandlerQueue()
+    picker_node = CollisionNode('ray')
+    picker_node_path = self.camera.attachNewNode(picker_node)
+    picker_node.setFromCollideMask(GeomNode.getDefaultCollideMask())
+    self.picker_ray = CollisionRay()
+    picker_node.addSolid(self.picker_ray)
+    self.collission_traverser.addCollider(picker_node_path,self.collission_handler)
+    
+    # setup the GUI:
+    
+    # TODO: change this to regulart cross later:
+    self.cross = OnscreenText(text="+",parent=base.a2dBackground,pos=(0,0), scale=0.08,fg=(1, 1, 1, 1),shadow=(0, 0, 0, .5))
 
 app = Game()
 app.run()
