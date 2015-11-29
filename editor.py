@@ -100,7 +100,7 @@ class Editor(Frame):
     self.redraw_level()
     self.update_gui_info()
     
-  def on_canvas_click(self, event):
+  def on_canvas_click(self, event):   # left click
     prop_clicked = None
     
     if self.get_check("display props"):
@@ -126,7 +126,7 @@ class Editor(Frame):
     self.redraw_level()
     self.update_gui_info()
 
-  def on_canvas_click2(self, event):   # right click 
+  def on_canvas_click2(self, event):  # right click 
     try:
       if self.selected_tile != None:
         clicked_tile = self.pixel_to_tile_coordinates(event.x,event.y)
@@ -144,6 +144,7 @@ class Editor(Frame):
         tile.wall_model.framerate = float(self.get_text("wall framerate"))
         tile.floor_model.framerate = float(self.get_text("floor framerate"))
         tile.ceiling_model.framerate = float(self.get_text("ceiling framerate"))
+        tile.ceiling_height = float(self.get_text("ceiling height"))
       elif self.selected_prop != None:
         self.selected_prop.position = self.pixel_to_world_coordinates(event.x,event.y)
         

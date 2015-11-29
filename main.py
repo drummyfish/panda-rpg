@@ -462,7 +462,7 @@ class Game(ShowBase, DirectObject.DirectObject):
     
     directional_light = DirectionalLight('diffuse')
     directional_light_path = render.attachNewNode(directional_light)
-    directional_light_path.setHpr(0,-90,0)
+    directional_light_path.setHpr(30,-80,0)
     directional_light_path.set_compass()
     render.setLight(directional_light_path)
 

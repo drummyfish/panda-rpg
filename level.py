@@ -25,7 +25,7 @@ class LevelTile:
     if level_tile == None:
       self.wall = False                                ##< whether the tile is a wall (True) or floor (False)
       self.ceiling = False                             ##< whether the tile has a ceiling (ceiling can also be above walls)
-      self.ceiling_height = 1
+      self.ceiling_height = 1.0
       self.floor_orientation = 0                       ##< rotation of the floor, possible values: 0, 1, 2, 3
       self.wall_model = AnimatedTextureModel()         ##< model for wall 
       self.floor_model = AnimatedTextureModel()        ##< model for floor
