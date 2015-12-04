@@ -30,8 +30,8 @@ class Game(ShowBase, DirectObject.DirectObject):
     props.setCursorHidden(True) 
     props.setMouseMode(WindowProperties.M_relative)
 
-    base.win.requestProperties(props) 
-
+    base.win.requestProperties(props)
+    
     FPS = 60
     globalClock = ClockObject.getGlobalClock()
     globalClock.setMode(ClockObject.MLimited)
@@ -46,6 +46,8 @@ class Game(ShowBase, DirectObject.DirectObject):
 
     self.time_of_jump = - 0.100                                     ##< time of last player's jump
     self.in_air = False                                             ##< if the player is in air (jumping)
+
+    self.node_object_mapping = {}                                   ##< contains mapping of some node names to their corresponding objects
 
     base.setFrameRateMeter(True)
 
@@ -76,11 +78,10 @@ class Game(ShowBase, DirectObject.DirectObject):
       self.accept(key,self.handle_input,[key,True])
       self.accept(key + "-up",self.handle_input,[key,False])
 
-    level = Level.load_from_file("test_exterior.txt")
+    self.level = Level.load_from_file("test_exterior.txt")         ##< contains the level data
+    self.collision_mask = self.level.get_collision_mask()
+    self.setup_environment_scene(self.level)
     
-    self.collision_mask = level.get_collision_mask()
-    self.setup_environment_scene(level)
-
   def handle_input(self,input_name,input_value):
     self.input_state[input_name] = input_value
 
@@ -256,10 +257,17 @@ class Game(ShowBase, DirectObject.DirectObject):
     if self.collission_handler.getNumEntries() > 0:
       self.collission_handler.sortEntries()
       picked_object = self.collission_handler.getEntry(0).getIntoNodePath()
+      picked_node = picked_object.getNodes()[2]
       
-      print(self.collission_handler.getNumEntries())
-      print(picked_object)
-
+      distance = self.camera.getDistance(picked_object) 
+      print(distance)
+      
+      try:
+        picked_name = picked_node.getName()
+        print(self.node_object_mapping[picked_name].caption)
+      except Exception:
+        pass
+      
     return task.cont
 
   ## Sets the time of the day as a value in interval <0,1> to affect the scene (lighting, skybox texture, ...).
@@ -423,11 +431,19 @@ class Game(ShowBase, DirectObject.DirectObject):
 
     # add props to the level:
 
+    prop_counter = 0
+
     for prop in level.get_props():
       tile_node_path = self.level_node_path.attachNewNode(make_node(prop.model))
+      name = "p" + str(prop_counter)              # 'p' for prop
+      tile_node_path.getNodes()[0].setName(name)
+      self.node_object_mapping[name] = prop
+      
+      prop_counter += 1
+      
       tile_node_path.setPos(prop.position[0] - 0.5,0,prop.position[1] - 0.5)
       tile_node_path.setHpr(0,0,prop.orientation)
-
+      
     skybox_texture_names = level.get_skybox_textures()
     
     # setup the skybox (if there are any textures, otherwise don't create it at all)

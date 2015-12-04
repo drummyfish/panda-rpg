@@ -55,10 +55,14 @@ class LevelProp:
       self.model = AnimatedTextureModel()
       self.position = position             ##< (x,y) float position
       self.orientation = orientation       ##< rotation in degrees
+      self.caption = ""                    ##< caption displayed in the game, "" = no caption
+      self.data = ""                       ##< may contain arbitrary data relevant to the object
     else:
       self.model = AnimatedTextureModel(level_prop.model)
       self.position  = level_prop.position
       self.orientation = level_prop.orientation
+      self.caption = level_prop.caption
+      self.data = level_prop.data
 
 class Level:
   ## Class static method, saves the level into given file.

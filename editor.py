@@ -97,6 +97,7 @@ class Editor(Frame):
     self.selected_prop.model.texture_names = self.string_to_list(self.get_text("prop textures"))
     self.selected_prop.model.framerate = float(self.get_text("prop framerate"))
     self.selected_prop.orientation = float(self.get_text("prop orientation"))
+    self.selected_prop.caption = self.get_text("caption")
     self.redraw_level()
     self.update_gui_info()
     
@@ -244,17 +245,17 @@ class Editor(Frame):
       
     if self.selected_prop != None:
       self.set_text("prop position",str(self.selected_prop.position[0]) + ";" + str(self.selected_prop.position[1]))
-      
       self.set_text("prop orientation",str(self.selected_prop.orientation))
       self.set_text("prop model",self.selected_prop.model.model_name)
       self.set_text("prop textures",self.list_to_string(self.selected_prop.model.texture_names))
       self.set_text("prop framerate",str(self.selected_prop.model.framerate))
-      
+      self.set_text("caption",str(self.selected_prop.caption))    
     else:
       self.set_text("prop position","")
       self.set_text("prop orientation","")
       self.set_text("prop model","")
       self.set_text("prop textures","")
+      self.set_text("caption","")
       
   ## Returns integer tile coordinates from canvas pixel coordinates.
       
@@ -472,6 +473,7 @@ class Editor(Frame):
     self.add_name_value_input("prop model",left=False)
     self.add_name_value_input("prop textures",left=False)
     self.add_name_value_input("prop framerate",left=False)
+    self.add_name_value_input("caption",left=False)
     
     self.add_separator(left=False)
     
