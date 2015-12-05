@@ -1,45 +1,33 @@
 RESOURCE_PATH = "resources/"
 import pickle
+import copy
 
 ## Represents a model that has either static or animated frame animated texture.
 
 class AnimatedTextureModel:
-  def __init__(self, animated_texture_model=None):
-    if animated_texture_model == None:
-      self.model_name = ""
-      self.texture_names = []
-      self.framerate = 1.0
-    else:
-      self.model_name = animated_texture_model.model_name
-      self.framerate = animated_texture_model.framerate
-    
-      self.texture_names = []
+  def __init__(self):
+    self.model_name = ""
+    self.texture_names = []
+    self.framerate = 1.0
 
-      for texture_name in animated_texture_model.texture_names:
-        self.texture_names.append(texture_name)
+  def copy(self):
+    return copy.deepcopy(self)
 
 ## Represents one level tile.
 
 class LevelTile:
-  def __init__(self, level_tile=None):
-    if level_tile == None:
-      self.wall = False                                ##< whether the tile is a wall (True) or floor (False)
-      self.ceiling = False                             ##< whether the tile has a ceiling (ceiling can also be above walls)
-      self.ceiling_height = 1.0
-      self.floor_orientation = 0                       ##< rotation of the floor, possible values: 0, 1, 2, 3
-      self.wall_model = AnimatedTextureModel()         ##< model for wall 
-      self.floor_model = AnimatedTextureModel()        ##< model for floor
-      self.ceiling_model = AnimatedTextureModel()      ##< model for ceiling
-      self.steppable = not self.wall                   ##< whether the tile can be stepped on
-    else:                                              # make deep copy
-      self.wall = level_tile.wall
-      self.ceiling = level_tile.ceiling
-      self.ceiling_height = level_tile.ceiling_height
-      self.floor_orientation = level_tile.floor_orientation
-      self.wall_model = AnimatedTextureModel(level_tile.wall_model) 
-      self.floor_model = AnimatedTextureModel(level_tile.floor_model)        
-      self.ceiling_model = AnimatedTextureModel(level_tile.ceiling_model)      
-      self.steppable = level_tile.steppable
+  def __init__(self):
+    self.wall = False                                ##< whether the tile is a wall (True) or floor (False)
+    self.ceiling = False                             ##< whether the tile has a ceiling (ceiling can also be above walls)
+    self.ceiling_height = 1.0
+    self.floor_orientation = 0                       ##< rotation of the floor, possible values: 0, 1, 2, 3
+    self.wall_model = AnimatedTextureModel()         ##< model for wall 
+    self.floor_model = AnimatedTextureModel()        ##< model for floor
+    self.ceiling_model = AnimatedTextureModel()      ##< model for ceiling
+    self.steppable = not self.wall                   ##< whether the tile can be stepped on
+
+  def copy(self):
+    return copy.deepcopy(self)
     
   ## Checks if the tile is empty (has no model). Empty tile can still have ceiling.
     
@@ -50,19 +38,17 @@ class LevelTile:
 #  but doesnt affect anything in the game and has no colissions.
 
 class LevelProp:
-  def __init__(self, level_prop=None, position=[0.0,0.0], orientation=0):
-    if level_prop == None:
-      self.model = AnimatedTextureModel()
-      self.position = position             ##< (x,y) float position
-      self.orientation = orientation       ##< rotation in degrees
-      self.caption = ""                    ##< caption displayed in the game, "" = no caption
-      self.data = ""                       ##< may contain arbitrary data relevant to the object
-    else:
-      self.model = AnimatedTextureModel(level_prop.model)
-      self.position  = level_prop.position
-      self.orientation = level_prop.orientation
-      self.caption = level_prop.caption
-      self.data = level_prop.data
+  def __init__(self, position=[0.0,0.0], orientation=0):
+    self.model = AnimatedTextureModel()
+    self.position = position             ##< (x,y) float position
+    self.orientation = orientation       ##< rotation in degrees
+    self.caption = ""                    ##< caption displayed in the game, "" = no caption
+    self.data = ""                       ##< may contain arbitrary data relevant to the object
+
+  def copy(self):
+    return copy.deepcopy(self)
+    
+## Represents one game level.
 
 class Level:
   ## Class static method, saves the level into given file.

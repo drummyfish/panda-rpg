@@ -14,10 +14,11 @@ from level import *
 
 class Game(ShowBase, DirectObject.DirectObject):
   DAYTIME_UPDATE_COUNTER = 32
-  JUMP_DURATION = 0.6                                               ##< jump duration in seconds
+  JUMP_DURATION = 0.6                    ##< jump duration in seconds
   CAMERA_HEIGHT = 0.7
   JUMP_EXTRA_HEIGHT = 0.3
   FOG_RANGE = 5
+  USE_DISTANCE = 1                       ##< distance within which objects can be used by the player                           
   
   def __init__(self):
     vsync = ConfigVariableBool("sync-video")
@@ -259,14 +260,20 @@ class Game(ShowBase, DirectObject.DirectObject):
       picked_object = self.collission_handler.getEntry(0).getIntoNodePath()
       picked_node = picked_object.getNodes()[2]
       
-      distance = self.camera.getDistance(picked_object) 
-      print(distance)
+      distance = self.camera.getDistance(picked_object)
+      
+      if distance > Game.USE_DISTANCE:
+        picked_object = None
+        picked_node = None
       
       try:
         picked_name = picked_node.getName()
-        print(self.node_object_mapping[picked_name].caption)
+        caption = self.node_object_mapping[picked_name].caption
       except Exception:
-        pass
+        caption = ""
+      
+      if caption != self.description_text.getText():
+        self.description_text.setText(caption)
       
     return task.cont
 
@@ -531,6 +538,7 @@ class Game(ShowBase, DirectObject.DirectObject):
     
     # TODO: change this to regulart cross later:
     self.cross = OnscreenText(text="+",parent=base.a2dBackground,pos=(0,0), scale=0.08,fg=(1, 1, 1, 1),shadow=(0, 0, 0, .5))
+    self.description_text = OnscreenText(text="",parent=base.a2dBackground,pos=(0,-0.15), scale=0.08,fg=(1, 1, 1, 1),shadow=(0, 0, 0, .5))
 
 app = Game()
 app.run()
