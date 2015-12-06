@@ -10,6 +10,7 @@ from pandac.PandaModules import ClockObject
 from panda3d.core import ConfigVariableBool, CullBinManager
 from direct.gui.OnscreenText import OnscreenText
 
+from general import *
 from level import *
 
 class Game(ShowBase, DirectObject.DirectObject):
@@ -273,6 +274,10 @@ class Game(ShowBase, DirectObject.DirectObject):
         caption = ""
       
       if caption != self.description_text.getText():
+        
+        # TMP: TEST
+        self.run_script("test_script.py","this is param")
+        
         self.description_text.setText(caption)
       
     return task.cont
@@ -540,5 +545,57 @@ class Game(ShowBase, DirectObject.DirectObject):
     self.cross = OnscreenText(text="+",parent=base.a2dBackground,pos=(0,0), scale=0.08,fg=(1, 1, 1, 1),shadow=(0, 0, 0, .5))
     self.description_text = OnscreenText(text="",parent=base.a2dBackground,pos=(0,-0.15), scale=0.08,fg=(1, 1, 1, 1),shadow=(0, 0, 0, .5))
 
+  ## Runs given game script in the current context.
+  #  @param filename name of the script (including extension but without the resource path)
+  #  @param param parameter that will be passes to the script (along with the 'self' reference)
+  
+  def run_script(self, filename, param=None):
+    game = self        # accesible from the script
+    parameter = param  # accesible from the script
+    
+    try:
+      execfile(RESOURCE_PATH + filename)
+    except Exception as e:
+      print("error running script " + filename)
+      print(e)
+    
+  # ==================================== SCRIP API ====================================
+  # The following functions are intended to be called from the game scripts, but can also
+  # be called from the core source as well. Core functions however should never be called
+  # from the scripts. Each script will be passed a reference to this (self) Game object
+  # and a parameter (named parameter) in which the object that triggered the sctipt will
+  # be passed.
+  
+  def script_print(self, what):
+    print(what)
+    
+  def script_get_player_position(self):
+    return self.player_position
+
+  def script_set_player_position(self, new_position):
+    self.player_position = new_position
+
+  ## Return a tuple (horizontal_rotation, vertical_rotation) in angles.
+
+  def script_get_player_rotation(self):
+    rotation = self.camera.getHpr()
+    return (rotation[0],rotation[1])
+
+  ## Sets the player rotation.
+  #  @param new_rotation a tuple (horizontal_rotation, vertical_rotation) in angles
+
+  def script_set_player_rotation(self, new_rotation):
+    self.camera.setHpr(new_rotation[0],new_rotation[1],0.0)
+
+  def script_get_level_size(self):
+    return (self.level.get_width(),self.level.get_height())
+
+  def script_get_daytime(self):
+    return self.daytime
+  
+  def script_set_daytime(self, new_daytime):
+    self.set_daytime(new_daytime)
+    
+  
 app = Game()
 app.run()

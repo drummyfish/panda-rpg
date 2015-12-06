@@ -1,4 +1,4 @@
-RESOURCE_PATH = "resources/"
+from general import *
 import pickle
 import copy
 

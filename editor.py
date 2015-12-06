@@ -2,6 +2,7 @@ from Tkinter import *
 from ttk import Frame, Button, Label, Style
 import tkFileDialog
 import math
+from general import *
 from level import *
 
 class Editor(Frame):
