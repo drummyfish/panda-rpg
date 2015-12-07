@@ -45,6 +45,12 @@ class LevelProp:
     self.caption = ""                    ##< caption displayed in the game, "" = no caption
     self.data = ""                       ##< may contain arbitrary data relevant to the object
 
+    # scripts (filenames):
+
+    self.scrip_load = ""                 ##< called when the prop is created
+    self.script_use = ""                 ##< called when the prop is used
+    self.script_examine = ""             ##< called when the prop is examind (looked at from short distance so that its label displays)
+
   def copy(self):
     return copy.deepcopy(self)
     

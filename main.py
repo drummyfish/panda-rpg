@@ -19,13 +19,15 @@ class Game(ShowBase, DirectObject.DirectObject):
   CAMERA_HEIGHT = 0.7
   JUMP_EXTRA_HEIGHT = 0.3
   FOG_RANGE = 5
-  USE_DISTANCE = 1                       ##< distance within which objects can be used by the player                           
+  USE_DISTANCE = 2                       ##< distance within which objects can be used by the player                           
   
   def __init__(self):
     vsync = ConfigVariableBool("sync-video")
     vsync.setValue(False)
     
     ShowBase.__init__(self)
+
+    # PStatClient.connect()              # <---- uncomment for profiling
 
     props = WindowProperties() 
     props.setSize(1024,768) 
@@ -48,8 +50,10 @@ class Game(ShowBase, DirectObject.DirectObject):
 
     self.time_of_jump = - 0.100                                     ##< time of last player's jump
     self.in_air = False                                             ##< if the player is in air (jumping)
+    self.use_pressed = False                                        ##< whether the use key way pressed
 
     self.node_object_mapping = {}                                   ##< contains mapping of some node names to their corresponding objects
+    self.focused_prop = None                                        ##< references a LevelProp item that the player is currently looking at
 
     base.setFrameRateMeter(True)
 
@@ -75,7 +79,7 @@ class Game(ShowBase, DirectObject.DirectObject):
     self.input_state["mxf"] = 0.0
     self.input_state["myf"] = 0.0
 
-    for key in ["w","s","a","d","q","e","mouse1","mouse3"]:
+    for key in ["w","s","a","d","q","e","space","mouse1","mouse3"]:
       self.input_state[key] = False
       self.accept(key,self.handle_input,[key,True])
       self.accept(key + "-up",self.handle_input,[key,False])
@@ -227,20 +231,29 @@ class Game(ShowBase, DirectObject.DirectObject):
     if not self.in_air and self.input_state["e"]:
       self.time_of_jump = task.time
     
+    if self.input_state["space"]:
+      if not self.use_pressed:
+        
+        if self.focused_prop != None and len(self.focused_prop.script_use) != 0:        
+          self.run_script(self.focused_prop.script_use,event_type="use",caller=self.focused_prop)
+        
+        self.use_pressed = True
+    else:
+      self.use_pressed = False
+    
     current_rotation = self.camera.getHpr()
     current_position = self.camera.getPos()
       
     self.player_rotation = current_rotation[0] % 360
     new_rotation = [current_rotation.getX(),current_rotation.getY(),current_rotation.getZ()] 
     window_center = (base.win.getXSize() / 2, base.win.getYSize() / 2)
-    base.win.movePointer(0, window_center[0], window_center[1])
-      
-    mouse_difference = (self.input_state["mx"],self.input_state["my"])
-      
-    new_rotation[0] -= mouse_difference[0] * self.camera_rotation_speed
-    new_rotation[1] += mouse_difference[1] * self.camera_rotation_speed 
     
-    self.camera.setHpr(new_rotation[0],max(min(new_rotation[1],90),-90),new_rotation[2])
+    if base.mouseWatcherNode.hasMouse():
+      base.win.movePointer(0, window_center[0], window_center[1])
+      mouse_difference = (self.input_state["mx"],self.input_state["my"])
+      new_rotation[0] -= mouse_difference[0] * self.camera_rotation_speed
+      new_rotation[1] += mouse_difference[1] * self.camera_rotation_speed  
+      self.camera.setHpr(new_rotation[0],max(min(new_rotation[1],90),-90),new_rotation[2])
 
     camera_height = Game.CAMERA_HEIGHT
     
@@ -255,6 +268,7 @@ class Game(ShowBase, DirectObject.DirectObject):
     self.picker_ray.setFromLens(base.camNode,0,0)
  
     self.collission_traverser.traverse(self.level_node_path)
+    self.focused_prop = None
     
     if self.collission_handler.getNumEntries() > 0:
       self.collission_handler.sortEntries()
@@ -269,15 +283,12 @@ class Game(ShowBase, DirectObject.DirectObject):
       
       try:
         picked_name = picked_node.getName()
-        caption = self.node_object_mapping[picked_name].caption
+        self.focused_prop = self.node_object_mapping[picked_name]
+        caption = self.focused_prop.caption
       except Exception:
         caption = ""
       
-      if caption != self.description_text.getText():
-        
-        # TMP: TEST
-        self.run_script("test_script.py","this is param")
-        
+      if caption != self.description_text.getText():        
         self.description_text.setText(caption)
       
     return task.cont
@@ -381,6 +392,8 @@ class Game(ShowBase, DirectObject.DirectObject):
         if len(textures_for_node) == 1:
           node_path.setTexture(textures_for_node[0])
         
+        node_path.set_bin("opaque",1)
+        
         return node
       else:  # node with animated texture
         sequence_node = SequenceNode("sequence")
@@ -392,9 +405,14 @@ class Game(ShowBase, DirectObject.DirectObject):
           model.instanceTo(helper_node)
           helper_node.setTexture(texture)
         
+        node_path.set_bin("opaque",1)
+        
         sequence_node.loop(True)
       
         return sequence_node
+     
+    cull_bin_manager = CullBinManager.getGlobalPtr()
+    cull_bin_manager.setBinType(name="opaque",type=cull_bin_manager.BT_state_sorted)
       
     fog = Fog("fog")
     fog_color = level.get_fog_color()
@@ -411,6 +429,9 @@ class Game(ShowBase, DirectObject.DirectObject):
     self.level_node_path.reparentTo(self.render)
     self.level_node_path.setFog(fog)
     
+    self.level_node_path.setTransparency(TransparencyAttrib.MBinary,1)
+    self.level_node_path.set_bin("opaque",1)
+
     # make the level:
     
     for j in range(level.get_height()):
@@ -492,7 +513,6 @@ class Game(ShowBase, DirectObject.DirectObject):
         load_texture(skybox_texture_name)
         self.skybox_textures.append(textures[skybox_texture_name])
 
-    self.level_node_path.setTransparency(True)
     self.level_node_path.reparentTo(self.render)
     self.level_node_path.setHpr(90,90,0)
 
@@ -545,26 +565,45 @@ class Game(ShowBase, DirectObject.DirectObject):
     self.cross = OnscreenText(text="+",parent=base.a2dBackground,pos=(0,0), scale=0.08,fg=(1, 1, 1, 1),shadow=(0, 0, 0, .5))
     self.description_text = OnscreenText(text="",parent=base.a2dBackground,pos=(0,-0.15), scale=0.08,fg=(1, 1, 1, 1),shadow=(0, 0, 0, .5))
 
+    # run the init scripts:
+ 
+    for prop in level.get_props():
+      try:
+        if len(prop.script_load) != 0:
+          self.run_script(prop.script_load,event_type="load",caller=prop)
+      except Exception:
+        pass
+        
+
   ## Runs given game script in the current context.
   #  @param filename name of the script (including extension but without the resource path)
-  #  @param param parameter that will be passes to the script (along with the 'self' reference)
-  
-  def run_script(self, filename, param=None):
-    game = self        # accesible from the script
-    parameter = param  # accesible from the script
+  #  @param caller object that caused the script to be run
+  #  @param event_type event type as a string
+  #  @param params optional additional parameters
+
+  def run_script(self, filename, caller=None, event_type=None, params=None):
+    # set the local variables for the script:
+    
+    game = self        
+    parameters = params
+    source = caller
+    event_type = event_type
     
     try:
       execfile(RESOURCE_PATH + filename)
     except Exception as e:
-      print("error running script " + filename)
+      print("error running script '" + filename + "':")
       print(e)
     
   # ==================================== SCRIP API ====================================
   # The following functions are intended to be called from the game scripts, but can also
   # be called from the core source as well. Core functions however should never be called
-  # from the scripts. Each script will be passed a reference to this (self) Game object
-  # and a parameter (named parameter) in which the object that triggered the sctipt will
-  # be passed.
+  # from the scripts. The following local variables are available withing the script:
+  #
+  # game - reference to this Game object (self)
+  # source - object that caused the script to be called
+  # event_type - type of the event that caused the script to be called as a string
+  # parameters - additional parameters
   
   def script_print(self, what):
     print(what)
@@ -596,6 +635,26 @@ class Game(ShowBase, DirectObject.DirectObject):
   def script_set_daytime(self, new_daytime):
     self.set_daytime(new_daytime)
     
-  
+  ## Gets position of given object, which can be prop, NPC etc.
+  #  For player position see script_get_player_position.
+  #  @return (x,y) float tuple
+    
+  def script_get_position(self, what):
+    return what.position
+    
+  def script_get_tile_steppable(self, x, y):
+    try:
+      return self.collision_mask[x][y]
+    except Exception:
+      return False
+    
+  def script_set_tile_steppable(self, x, y, steppable):
+    try:
+      self.level.get_tile(x,y).steppable = steppable
+      # get the new collision mask:
+      self.collision_mask = self.level.get_collision_mask()
+    except Exception:
+      pass
+    
 app = Game()
 app.run()

@@ -100,6 +100,10 @@ class Editor(Frame):
     self.selected_prop.orientation = float(self.get_text("prop orientation"))
     self.selected_prop.caption = self.get_text("caption")
     self.selected_prop.data = self.get_text("data")
+    self.selected_prop.script_load = self.get_text("script - load")
+    self.selected_prop.script_use = self.get_text("script - use")
+    self.selected_prop.script_examine = self.get_text("script - examine")
+    
     self.redraw_level()
     self.update_gui_info()
     
@@ -252,7 +256,10 @@ class Editor(Frame):
       self.set_text("prop textures",self.list_to_string(self.selected_prop.model.texture_names))
       self.set_text("prop framerate",str(self.selected_prop.model.framerate))
       self.set_text("caption",str(self.selected_prop.caption))
-      self.set_text("data",str(self.selected_prop.data)) 
+      self.set_text("data",str(self.selected_prop.data))
+      self.set_text("script - load",self.selected_prop.script_load)
+      self.set_text("script - use",self.selected_prop.script_use)
+      self.set_text("script - examine",self.selected_prop.script_examine)
     else:
       self.set_text("prop position","")
       self.set_text("prop orientation","")
@@ -261,6 +268,9 @@ class Editor(Frame):
       self.set_text("prop framerate","")
       self.set_text("caption","")
       self.set_text("data","")
+      self.set_text("script - load","")
+      self.set_text("script - use","")
+      self.set_text("script - examine","")
       
   ## Returns integer tile coordinates from canvas pixel coordinates.
       
@@ -480,6 +490,10 @@ class Editor(Frame):
     self.add_name_value_input("prop framerate",left=False)
     self.add_name_value_input("caption",left=False)
     self.add_name_value_input("data",left=False)
+
+    self.add_name_value_input("script - load",left=False)
+    self.add_name_value_input("script - use",left=False)
+    self.add_name_value_input("script - examine",left=False)    
     
     self.add_separator(left=False)
     
