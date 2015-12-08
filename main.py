@@ -275,6 +275,8 @@ class Game(ShowBase, DirectObject.DirectObject):
     self.collission_traverser.traverse(self.level_node_path)
     self.focused_prop = None
     
+    caption = ""
+    
     if self.collission_handler.getNumEntries() > 0:
       self.collission_handler.sortEntries()
       picked_object = self.collission_handler.getEntry(0).getIntoNodePath()
@@ -291,10 +293,10 @@ class Game(ShowBase, DirectObject.DirectObject):
         self.focused_prop = self.node_object_mapping[picked_name]
         caption = self.focused_prop.caption
       except Exception:
-        caption = ""
+        pass
       
-      if caption != self.description_text.getText():        
-        self.description_text.setText(caption)
+    if caption != self.description_text.getText():        
+      self.description_text.setText(caption)
       
     return task.cont
 
