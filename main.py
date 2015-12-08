@@ -467,15 +467,16 @@ class Game(ShowBase, DirectObject.DirectObject):
     prop_counter = 0
 
     for prop in level.get_props():
-      tile_node_path = self.level_node_path.attachNewNode(make_node(prop.model))
+      prop_node_path = self.level_node_path.attachNewNode(make_node(prop.model))
       name = "p" + str(prop_counter)              # 'p' for prop
-      tile_node_path.getNodes()[0].setName(name)
+      prop_node_path.getNodes()[0].setName(name)
       self.node_object_mapping[name] = prop
+      prop.node_path = prop_node_path             # add new property to the prop: node path reference (for later dynamic modifications)
       
       prop_counter += 1
       
-      tile_node_path.setPos(prop.position[0] - 0.5,0,prop.position[1] - 0.5)
-      tile_node_path.setHpr(0,0,prop.orientation)
+      prop_node_path.setPos(prop.position[0] - 0.5,0,prop.position[1] - 0.5)
+      prop_node_path.setHpr(0,0,prop.orientation)
       
     skybox_texture_names = level.get_skybox_textures()
     
@@ -574,7 +575,6 @@ class Game(ShowBase, DirectObject.DirectObject):
       except Exception:
         pass
         
-
   ## Runs given game script in the current context.
   #  @param filename name of the script (including extension but without the resource path)
   #  @param caller object that caused the script to be run
@@ -608,8 +608,14 @@ class Game(ShowBase, DirectObject.DirectObject):
   def script_print(self, what):
     print(what)
     
+  ## Gets the player position.
+  #  @return player position as (x,y) tuple, note that this differs from
+  #    the internal player position by half a square to match other
+  #    positions
+    
   def script_get_player_position(self):
-    return self.player_position
+    position = self.player_position    
+    return (position[0] + 0.5,position[1] + 0.5)
 
   def script_set_player_position(self, new_position):
     self.player_position = new_position
@@ -641,6 +647,11 @@ class Game(ShowBase, DirectObject.DirectObject):
     
   def script_get_position(self, what):
     return what.position
+    
+  def script_set_position(self, what, new_x, new_y):
+    what.position = (new_x,new_y)
+    # change the corresponding node path position:
+    what.node_path.setPos(new_x - 0.5,0,new_y - 0.5)
     
   def script_get_tile_steppable(self, x, y):
     try:
