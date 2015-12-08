@@ -9,6 +9,7 @@ from direct.filter.CommonFilters import CommonFilters
 from pandac.PandaModules import ClockObject
 from panda3d.core import ConfigVariableBool, CullBinManager
 from direct.gui.OnscreenText import OnscreenText
+from direct.interval.LerpInterval import LerpPosInterval
 
 from general import *
 from level import *
@@ -87,6 +88,10 @@ class Game(ShowBase, DirectObject.DirectObject):
     self.level = Level.load_from_file("test_exterior.txt")         ##< contains the level data
     self.collision_mask = self.level.get_collision_mask()
     self.setup_environment_scene(self.level)
+    
+  def reenable_usage_task(self, prop, task):
+    prop.disable_usage = False
+    return task.done
     
   def handle_input(self,input_name,input_value):
     self.input_state[input_name] = input_value
@@ -234,7 +239,7 @@ class Game(ShowBase, DirectObject.DirectObject):
     if self.input_state["space"]:
       if not self.use_pressed:
         
-        if self.focused_prop != None and len(self.focused_prop.script_use) != 0:        
+        if self.focused_prop != None and not self.focused_prop.disable_usage and len(self.focused_prop.script_use) != 0:        
           self.run_script(self.focused_prop.script_use,event_type="use",caller=self.focused_prop)
         
         self.use_pressed = True
@@ -472,6 +477,7 @@ class Game(ShowBase, DirectObject.DirectObject):
       prop_node_path.getNodes()[0].setName(name)
       self.node_object_mapping[name] = prop
       prop.node_path = prop_node_path             # add new property to the prop: node path reference (for later dynamic modifications)
+      prop.disable_usage = False                  # helper property
       
       prop_counter += 1
       
@@ -652,6 +658,15 @@ class Game(ShowBase, DirectObject.DirectObject):
     what.position = (new_x,new_y)
     # change the corresponding node path position:
     what.node_path.setPos(new_x - 0.5,0,new_y - 0.5)
+    
+  ## Gradually moves given game object to a new position. 
+   
+  def script_move(self, what, new_x, new_y, duration):
+    what.position = (new_x,new_y)
+    what.disable_usage = True        # disable usage for the time of the movement
+    move_interval = LerpPosInterval(what.node_path,duration,(new_x - 0.5,0,new_y - 0.5))
+    taskMgr.doMethodLater(duration,self.reenable_usage_task,"reenable_task", extraArgs=[what],appendTask=True)  # this will re-enable the usage
+    move_interval.start()
     
   def script_get_tile_steppable(self, x, y):
     try:

@@ -38,7 +38,8 @@ if event_type == "use":
     
     if game.script_get_tile_steppable(x3,y3):
       game.script_set_tile_steppable(x,y,True)
-      game.script_set_position(source,new_position[0],new_position[1])
+      game.script_move(source,new_position[0],new_position[1],0.2)
+      #game.script_set_position(source,new_position[0],new_position[1])
       game.script_set_tile_steppable(x3,y3,False)
       
 elif event_type == "load":
