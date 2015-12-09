@@ -239,9 +239,9 @@ class Game(ShowBase, DirectObject.DirectObject):
     if self.input_state["space"]:
       if not self.use_pressed:
         
-        if self.focused_prop != None and not self.focused_prop.disable_usage and len(self.focused_prop.script_use) != 0:        
-          self.run_script(self.focused_prop.script_use,event_type="use",caller=self.focused_prop)
-        
+        if self.focused_prop != None and not self.focused_prop.disable_usage:
+          self.run_scripts(self.focused_prop.scripts_use,event_type="use",caller=self.focused_prop)
+          
         self.use_pressed = True
     else:
       self.use_pressed = False
@@ -578,8 +578,7 @@ class Game(ShowBase, DirectObject.DirectObject):
  
     for prop in level.get_props():
       try:
-        if len(prop.script_load) != 0:
-          self.run_script(prop.script_load,event_type="load",caller=prop)
+        self.run_scripts(prop.scripts_load,event_type="load",caller=prop)
       except Exception:
         pass
         
@@ -602,7 +601,13 @@ class Game(ShowBase, DirectObject.DirectObject):
     except Exception as e:
       print("error running script '" + filename + "':")
       print(e)
-    
+   
+  ## Runs all scripts in a list.
+   
+  def run_scripts(self, filenames, caller=None, event_type=None, params=None):
+    for filename in filenames:
+      self.run_script(filename,caller,event_type,params)
+  
   # ==================================== SCRIP API ====================================
   # The following functions are intended to be called from the game scripts, but can also
   # be called from the core source as well. Core functions however should never be called

@@ -100,9 +100,9 @@ class Editor(Frame):
     self.selected_prop.orientation = float(self.get_text("prop orientation"))
     self.selected_prop.caption = self.get_text("caption")
     self.selected_prop.data = self.get_text("data")
-    self.selected_prop.script_load = self.get_text("script - load")
-    self.selected_prop.script_use = self.get_text("script - use")
-    self.selected_prop.script_examine = self.get_text("script - examine")
+    self.selected_prop.scripts_load = self.string_to_list(self.get_text("scripts - load"))
+    self.selected_prop.scripts_use = self.string_to_list(self.get_text("scripts - use"))
+    self.selected_prop.scripts_examine = self.string_to_list(self.get_text("scripts - examine"))
     
     self.redraw_level()
     self.update_gui_info()
@@ -257,9 +257,9 @@ class Editor(Frame):
       self.set_text("prop framerate",str(self.selected_prop.model.framerate))
       self.set_text("caption",str(self.selected_prop.caption))
       self.set_text("data",str(self.selected_prop.data))
-      self.set_text("script - load",self.selected_prop.script_load)
-      self.set_text("script - use",self.selected_prop.script_use)
-      self.set_text("script - examine",self.selected_prop.script_examine)
+      self.set_text("scripts - load",self.list_to_string(self.selected_prop.scripts_load))
+      self.set_text("scripts - use",self.list_to_string(self.selected_prop.scripts_use))
+      self.set_text("scripts - examine",self.list_to_string(self.selected_prop.scripts_examine))
     else:
       self.set_text("prop position","")
       self.set_text("prop orientation","")
@@ -268,9 +268,9 @@ class Editor(Frame):
       self.set_text("prop framerate","")
       self.set_text("caption","")
       self.set_text("data","")
-      self.set_text("script - load","")
-      self.set_text("script - use","")
-      self.set_text("script - examine","")
+      self.set_text("scripts - load","")
+      self.set_text("scripts - use","")
+      self.set_text("scripts - examine","")
       
   ## Returns integer tile coordinates from canvas pixel coordinates.
       
@@ -491,9 +491,9 @@ class Editor(Frame):
     self.add_name_value_input("caption",left=False)
     self.add_name_value_input("data",left=False)
 
-    self.add_name_value_input("script - load",left=False)
-    self.add_name_value_input("script - use",left=False)
-    self.add_name_value_input("script - examine",left=False)    
+    self.add_name_value_input("scripts - load",left=False)
+    self.add_name_value_input("scripts - use",left=False)
+    self.add_name_value_input("scripts - examine",left=False)    
     
     self.add_separator(left=False)
     

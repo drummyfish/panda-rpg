@@ -47,9 +47,9 @@ class LevelProp:
 
     # scripts (filenames):
 
-    self.scrip_load = ""                 ##< called when the prop is created
-    self.script_use = ""                 ##< called when the prop is used
-    self.script_examine = ""             ##< called when the prop is examind (looked at from short distance so that its label displays)
+    self.scripts_load = []               ##< called when the prop is created
+    self.scripts_use = []                ##< called when the prop is used
+    self.scripts_examine = []            ##< called when the prop is examind (looked at from short distance so that its label displays)
 
   def copy(self):
     return copy.deepcopy(self)
