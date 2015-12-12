@@ -438,10 +438,6 @@ class Game(ShowBase, DirectObject.DirectObject):
     
     self.level_node_path = NodePath("level")
     self.level_node_path.reparentTo(self.render)
-    self.level_node_path.setFog(fog)
-    
-    self.level_node_path.setTransparency(TransparencyAttrib.MBinary,1)
-    self.level_node_path.set_bin("opaque",1)
 
     # make the level:
     
@@ -473,7 +469,7 @@ class Game(ShowBase, DirectObject.DirectObject):
           tile_node_path = self.level_node_path.attachNewNode(make_node(level.get_tile(i,j).ceiling_model))
           tile_node_path.setPos(i,level.get_tile(i,j).ceiling_height,j)
 
-    self.level_node_path.flattenLight()
+    self.level_node_path.flattenLight()             # for optimisation => level geometry won't change
 
     # add props to the level:
 
@@ -493,6 +489,10 @@ class Game(ShowBase, DirectObject.DirectObject):
       prop_node_path.setHpr(90,90,prop.orientation)
       
     skybox_texture_names = level.get_skybox_textures()
+    
+    self.level_node_path.setFog(fog)
+    self.level_node_path.setTransparency(TransparencyAttrib.MBinary,1)
+    self.level_node_path.set_bin("opaque",1)
     
     # setup the skybox (if there are any textures, otherwise don't create it at all)
     
