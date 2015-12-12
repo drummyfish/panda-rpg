@@ -22,13 +22,16 @@ class Game(ShowBase, DirectObject.DirectObject):
   FOG_RANGE = 5
   USE_DISTANCE = 2                       ##< distance within which objects can be used by the player                           
   
+  PROFILING = False                      ##< turn on for Panda3D profiling
+  
   def __init__(self):
     vsync = ConfigVariableBool("sync-video")
     vsync.setValue(False)
     
     ShowBase.__init__(self)
 
-    # PStatClient.connect()              # <---- uncomment for profiling
+    if Game.PROFILING:
+      PStatClient.connect()              # <---- uncomment for profiling
 
     props = WindowProperties() 
     props.setSize(1024,768) 
@@ -67,7 +70,8 @@ class Game(ShowBase, DirectObject.DirectObject):
     self.camera_movement_speed = 4
     self.camera_rotation_speed = 0.3
 
-    base.disableMouse()
+    if not Game.PROFILING:
+      base.disableMouse()
 
     self.taskMgr.add(self.camera_task,"camera_task")
     self.taskMgr.add(self.mouse_position_task,"mouse_position_task")
@@ -253,7 +257,7 @@ class Game(ShowBase, DirectObject.DirectObject):
     new_rotation = [current_rotation.getX(),current_rotation.getY(),current_rotation.getZ()] 
     window_center = (base.win.getXSize() / 2, base.win.getYSize() / 2)
     
-    if base.mouseWatcherNode.hasMouse():
+    if base.mouseWatcherNode.hasMouse() and not Game.PROFILING:
       base.win.movePointer(0, window_center[0], window_center[1])
       mouse_difference = (self.input_state["mx"],self.input_state["my"])
       new_rotation[0] -= mouse_difference[0] * self.camera_rotation_speed
@@ -448,8 +452,8 @@ class Game(ShowBase, DirectObject.DirectObject):
         if not tile.is_empty():
           if not tile.wall: # floor tile
             tile_node_path = self.level_node_path.attachNewNode(make_node(level.get_tile(i,j).floor_model))
-            tile_node_path.setPos(i,0,j)
-            tile_node_path.setHpr(0,0,level.get_tile(i,j).floor_orientation * 90)
+            tile_node_path.setPos(j,i,0)
+            tile_node_path.setHpr(90,90,level.get_tile(i,j).floor_orientation * 90)
           else:             # wall
             offsets = [[0,0.5], [0.5,0], [-0.5,0], [0,-0.5]] # down, right, left, up
             rotations = [-90, 0, 180, 90]
@@ -462,12 +466,14 @@ class Game(ShowBase, DirectObject.DirectObject):
                 continue
 
               tile_node_path = self.level_node_path.attachNewNode(make_node(level.get_tile(i,j).wall_model))
-              tile_node_path.setPos(i + offsets[k][0],0,j + offsets[k][1])
-              tile_node_path.setHpr(0,0,rotations[k])
+              tile_node_path.setPos(j + offsets[k][1],i + offsets[k][0],0)
+              tile_node_path.setHpr(90,90,rotations[k])
 
         if level.get_tile(i,j).ceiling:
           tile_node_path = self.level_node_path.attachNewNode(make_node(level.get_tile(i,j).ceiling_model))
           tile_node_path.setPos(i,level.get_tile(i,j).ceiling_height,j)
+
+    self.level_node_path.flattenLight()
 
     # add props to the level:
 
@@ -483,8 +489,8 @@ class Game(ShowBase, DirectObject.DirectObject):
       
       prop_counter += 1
       
-      prop_node_path.setPos(prop.position[0] - 0.5,0,prop.position[1] - 0.5)
-      prop_node_path.setHpr(0,0,prop.orientation)
+      prop_node_path.setPos(prop.position[1] - 0.5,prop.position[0] - 0.5,0)
+      prop_node_path.setHpr(90,90,prop.orientation)
       
     skybox_texture_names = level.get_skybox_textures()
     
@@ -523,7 +529,6 @@ class Game(ShowBase, DirectObject.DirectObject):
         self.skybox_textures.append(textures[skybox_texture_name])
 
     self.level_node_path.reparentTo(self.render)
-    self.level_node_path.setHpr(90,90,0)
 
     # setup the lights:
     
@@ -664,14 +669,14 @@ class Game(ShowBase, DirectObject.DirectObject):
   def script_set_position(self, what, new_x, new_y):
     what.position = (new_x,new_y)
     # change the corresponding node path position:
-    what.node_path.setPos(new_x - 0.5,0,new_y - 0.5)
+    what.node_path.setPos(new_y - 0.5,new_x - 0.5,0)
     
   ## Gradually moves given game object to a new position. 
    
   def script_move(self, what, new_x, new_y, duration):
     what.position = (new_x,new_y)
     what.disable_usage = True        # disable usage for the time of the movement
-    move_interval = LerpPosInterval(what.node_path,duration,(new_x - 0.5,0,new_y - 0.5))
+    move_interval = LerpPosInterval(what.node_path,duration,(new_y - 0.5,new_x - 0.5,0))
     taskMgr.doMethodLater(duration,self.reenable_usage_task,"reenable_task", extraArgs=[what],appendTask=True)  # this will re-enable the usage
     move_interval.start()
     
