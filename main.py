@@ -20,7 +20,9 @@ class Game(ShowBase, DirectObject.DirectObject):
   CAMERA_HEIGHT = 0.7
   JUMP_EXTRA_HEIGHT = 0.3
   FOG_RANGE = 5
-  USE_DISTANCE = 2                       ##< distance within which objects can be used by the player                           
+  USE_DISTANCE = 2                       ##< distance within which objects can be used by the player                          
+  MOVEMENT_SPEED = 1.8
+  RUN_SPEED = 4.2
   
   PROFILING = False                      ##< turn on for Panda3D profiling
   
@@ -61,13 +63,14 @@ class Game(ShowBase, DirectObject.DirectObject):
 
     base.setFrameRateMeter(True)
 
+    self.head_bob_phase = 0.0                                       ##< head bob phase in <0,1> range
+
     self.filters = CommonFilters(base.win,base.cam)   
     self.filters.setBloom(size="small",desat=1)
 
     # initialise input handling:
 
     self.camera_time_before = 0
-    self.camera_movement_speed = 4
     self.camera_rotation_speed = 0.3
 
     if not Game.PROFILING:
@@ -84,7 +87,11 @@ class Game(ShowBase, DirectObject.DirectObject):
     self.input_state["mxf"] = 0.0
     self.input_state["myf"] = 0.0
 
-    for key in ["w","s","a","d","q","e","space","mouse1","mouse3"]:
+    # these 2 lines disable modifier event strings (so instead of "shift-a" only "a" will be sent)
+    base.mouseWatcherNode.set_modifier_buttons(ModifierButtons())
+    base.buttonThrowers[0].node().set_modifier_buttons(ModifierButtons())
+
+    for key in ["w","s","a","d","W","S","A","D","q","e","shift","space","mouse1","mouse3"]:
       self.input_state[key] = False
       self.accept(key,self.handle_input,[key,True])
       self.accept(key + "-up",self.handle_input,[key,False])
@@ -222,20 +229,29 @@ class Game(ShowBase, DirectObject.DirectObject):
     new_position = [self.player_position[0],self.player_position[1]]
     time_difference = task.time - self.camera_time_before    
     self.camera_time_before = task.time
-    distance = self.camera_movement_speed * time_difference
+    distance =  (Game.RUN_SPEED if self.input_state["shift"] else Game.MOVEMENT_SPEED) * time_difference
     self.in_air = task.time <= self.time_of_jump + Game.JUMP_DURATION
+
+    reset_head_bob = True
 
     if self.input_state["w"]:
       self.player_position = self.move_with_collisions(self.player_position,self.player_rotation,distance)
-
+      reset_head_bob = False
+ 
     if self.input_state["s"]:
       self.player_position = self.move_with_collisions(self.player_position,self.player_rotation + 180,distance)
+      reset_head_bob = False
 
     if self.input_state["a"]:
       self.player_position = self.move_with_collisions(self.player_position,self.player_rotation + 90,distance)
+      reset_head_bob = False
 
     if self.input_state["d"]:
       self.player_position = self.move_with_collisions(self.player_position,self.player_rotation + 270,distance)
+      reset_head_bob = False
+    
+    self.head_bob_phase = 0.0 if (reset_head_bob and self.head_bob_phase < 0.2) else (self.head_bob_phase + time_difference * 2) % 1.0
+    head_bob_offset = sin(self.head_bob_phase * pi) * 0.04
     
     if not self.in_air and self.input_state["e"]:
       self.time_of_jump = task.time
@@ -270,6 +286,8 @@ class Game(ShowBase, DirectObject.DirectObject):
       jump_phase = (task.time - self.time_of_jump) / Game.JUMP_DURATION
       camera_height += Game.JUMP_EXTRA_HEIGHT * (1 - (jump_phase * 2 - 1) ** 2)
       
+    camera_height += head_bob_offset
+
     self.camera.setPos(self.player_position[1],self.player_position[0],camera_height)
 
     # handle ray picking:
