@@ -635,8 +635,8 @@ class Game(ShowBase, DirectObject.DirectObject):
     position = self.player_position    
     return (position[0] + 0.5,position[1] + 0.5)
 
-  def script_set_player_position(self, new_position):
-    self.player_position = new_position
+  def script_set_player_position(self, new_x, new_y):
+    self.player_position = (new_x,new_y)
 
   ## Return a tuple (horizontal_rotation, vertical_rotation) in angles.
 
@@ -645,10 +645,9 @@ class Game(ShowBase, DirectObject.DirectObject):
     return (rotation[0],rotation[1])
 
   ## Sets the player rotation.
-  #  @param new_rotation a tuple (horizontal_rotation, vertical_rotation) in angles
 
-  def script_set_player_rotation(self, new_rotation):
-    self.camera.setHpr(new_rotation[0],new_rotation[1],0.0)
+  def script_set_player_rotation(self, new_rotation_horizontal, new_rotation_vertical):
+    self.camera.setHpr(new_rotation_horizontal,new_rotation_vertical,0.0)
 
   def script_get_level_size(self):
     return (self.level.get_width(),self.level.get_height())
@@ -665,6 +664,11 @@ class Game(ShowBase, DirectObject.DirectObject):
     
   def script_get_position(self, what):
     return what.position
+    
+  ## Gets the data of the object as a string.
+    
+  def script_get_data(self, what):
+    return what.data
     
   def script_set_position(self, what, new_x, new_y):
     what.position = (new_x,new_y)
