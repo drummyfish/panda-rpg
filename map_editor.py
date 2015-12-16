@@ -5,7 +5,7 @@ import math
 from general import *
 from level import *
 
-class Editor(Frame):
+class MapEditor(Frame):
   TILE_SIZE = 20
   PROP_SIZE = 15         
   SMALL_TILE_SIZE = 14         # for displaying ceiling
@@ -275,12 +275,12 @@ class Editor(Frame):
   ## Returns integer tile coordinates from canvas pixel coordinates.
       
   def pixel_to_tile_coordinates(self, x, y):
-    return (int(math.floor(x / Editor.TILE_SIZE)),int(math.floor(y / Editor.TILE_SIZE)))
+    return (int(math.floor(x / MapEditor.TILE_SIZE)),int(math.floor(y / MapEditor.TILE_SIZE)))
   
   ## Same as pixel_to_tile_coordinates but returns floats coordiantes.
   
   def pixel_to_world_coordinates(self, x, y):
-    return (float(x) / Editor.TILE_SIZE,float(y) / Editor.TILE_SIZE)
+    return (float(x) / MapEditor.TILE_SIZE,float(y) / MapEditor.TILE_SIZE)
   
   def world_to_pixel_coordinates(self, x, y):
     return (int(x * self.TILE_SIZE),int(y * self.TILE_SIZE))
@@ -301,17 +301,17 @@ class Editor(Frame):
     return ("#%0.2x" % red) + ("%0.2x" % green) + ("%0.2x" % blue)
    
   def redraw_level(self):
-    self.canvas.config(width=self.level.get_width() * Editor.TILE_SIZE, height=self.level.get_height() * Editor.TILE_SIZE)
+    self.canvas.config(width=self.level.get_width() * MapEditor.TILE_SIZE, height=self.level.get_height() * MapEditor.TILE_SIZE)
     self.canvas.delete("all")
     
-    small_tile_offset = math.floor((Editor.TILE_SIZE - Editor.SMALL_TILE_SIZE) / 2)
+    small_tile_offset = math.floor((MapEditor.TILE_SIZE - MapEditor.SMALL_TILE_SIZE) / 2)
     
-    half_tile_size = Editor.TILE_SIZE / 2
+    half_tile_size = MapEditor.TILE_SIZE / 2
     
     for y in range(self.level.get_height()):
       for x in range(self.level.get_width()):
-        corner1 = (x * Editor.TILE_SIZE, y * Editor.TILE_SIZE)
-        corner2 = (corner1[0] + Editor.TILE_SIZE - 1, corner1[1] + Editor.TILE_SIZE - 1)
+        corner1 = (x * MapEditor.TILE_SIZE, y * MapEditor.TILE_SIZE)
+        corner2 = (corner1[0] + MapEditor.TILE_SIZE - 1, corner1[1] + MapEditor.TILE_SIZE - 1)
         
         tile = self.level.get_tile(x,y)
         
@@ -360,7 +360,7 @@ class Editor(Frame):
         
         position = self.world_to_pixel_coordinates(prop.position[0],prop.position[1])
       
-        difference = Editor.PROP_SIZE / 2
+        difference = MapEditor.PROP_SIZE / 2
   
         fill_color = self.compute_model_color(prop.model)
   
@@ -377,7 +377,7 @@ class Editor(Frame):
     if spread_x:
       stick = stick + E
     
-    widget.grid(row=grid_x, column=grid_y, rowspan=row_span, columnspan=column_span, padx=Editor.PADDING_X, pady=Editor.PADDING_Y, sticky=stick)
+    widget.grid(row=grid_x, column=grid_y, rowspan=row_span, columnspan=column_span, padx=MapEditor.PADDING_X, pady=MapEditor.PADDING_Y, sticky=stick)
      
   def add_name_value_input(self, name, left=True):
     column = 0 if left else 3
@@ -438,7 +438,7 @@ class Editor(Frame):
       self.current_row_right += 1
       
   def init_ui(self):
-    self.parent.title("editor")
+    self.parent.title("map editor")
     self.style = Style()
     self.style.theme_use("default")
     self.pack(fill=BOTH, expand=1)
@@ -519,7 +519,7 @@ class Editor(Frame):
 def main():
   root = Tk()
   root.geometry("1280x1100")
-  app = Editor(root)
+  app = MapEditor(root)
   root.mainloop()  
 
 if __name__ == '__main__':
