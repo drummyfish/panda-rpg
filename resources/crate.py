@@ -42,5 +42,7 @@ if event_type == "use":
       #game.script_set_position(source,new_position[0],new_position[1])
       game.script_set_tile_steppable(x3,y3,False)
       
+      game.script_play_sound("crate_drag.wav")
+      
 elif event_type == "load":
   game.script_set_tile_steppable(x,y,False)

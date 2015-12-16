@@ -729,5 +729,10 @@ class Game(ShowBase, DirectObject.DirectObject):
     except Exception:
       pass
     
+  def script_play_sound(self, filename, volume=1.0):
+    sound = base.loader.loadSfx(RESOURCE_PATH + filename)
+    sound.setVolume(volume)
+    sound.play()
+    
 app = Game()
 app.run()
