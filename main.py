@@ -1,4 +1,4 @@
-from math import pi, sin, cos, radians
+from math import *
 from direct.showbase.ShowBase import ShowBase
 from direct.task import Task
 from direct.actor.Actor import Actor
@@ -251,7 +251,7 @@ class Game(ShowBase, DirectObject.DirectObject):
       reset_head_bob = False
     
     self.head_bob_phase = 0.0 if (reset_head_bob and self.head_bob_phase < 0.2) else (self.head_bob_phase + time_difference * 2) % 1.0
-    head_bob_offset = sin(self.head_bob_phase * pi) * 0.04
+    head_bob_offset = sin(self.head_bob_phase * pi) * 0.02
     
     if not self.in_air and self.input_state["e"]:
       self.time_of_jump = task.time
@@ -398,7 +398,7 @@ class Game(ShowBase, DirectObject.DirectObject):
         textures[texture_name] = self.loader.loadTexture(RESOURCE_PATH + texture_name)
         textures[texture_name].setMinfilter(Texture.FTLinearMipmapLinear)
 
-    def make_node(animated_texture_model):     # makes a node out of AnimatedTextureModel object, handles loading models and textures and caches
+    def make_node(animated_texture_model, name="node"):     # makes a node out of AnimatedTextureModel object, handles loading models and textures and caches
       load_model(animated_texture_model.model_name)
       
       model = models[animated_texture_model.model_name]
@@ -413,7 +413,7 @@ class Game(ShowBase, DirectObject.DirectObject):
       framerate = animated_texture_model.framerate
       
       if len(textures_for_node) in [0,1]:
-        node = PandaNode("node")
+        node = PandaNode(name)
         node_path = NodePath(node)
         result = NodePath(node_path)
         model.instanceTo(node_path)
@@ -425,7 +425,7 @@ class Game(ShowBase, DirectObject.DirectObject):
         
         return node
       else:  # node with animated texture
-        sequence_node = SequenceNode("sequence")
+        sequence_node = SequenceNode(name)
         sequence_node.setFrameRate(framerate)
         node_path = NodePath(sequence_node)
       
@@ -457,15 +457,22 @@ class Game(ShowBase, DirectObject.DirectObject):
     self.level_node_path = NodePath("level")
     self.level_node_path.reparentTo(self.render)
 
+    # make helper nodes for dividing the level into subnodes for optimization:
+    
+    subdivision = 4
+    level_subnodes = [[self.level_node_path.attachNewNode(PandaNode("sublevel " + str(x) + " " + str(y))) for x in range(int(ceil(level.get_width() / float(subdivision))))] for y in range(int(ceil(level.get_height() / float(subdivision))))]
+    
     # make the level:
     
     for j in range(level.get_height()):
       for i in range(level.get_width()):
         tile = level.get_tile(i,j)
+        node_parent = level_subnodes[i / subdivision][j / subdivision]
+        coordinate_string = str(i) + " " + str(j)
         
         if not tile.is_empty():
           if not tile.wall: # floor tile
-            tile_node_path = self.level_node_path.attachNewNode(make_node(level.get_tile(i,j).floor_model))
+            tile_node_path = node_parent.attachNewNode(make_node(level.get_tile(i,j).floor_model,"tile " + coordinate_string))
             tile_node_path.setPos(j,i,0)
             tile_node_path.setHpr(90,90,level.get_tile(i,j).floor_orientation * 90)
           else:             # wall
@@ -479,16 +486,20 @@ class Game(ShowBase, DirectObject.DirectObject):
               if level.is_wall(i + neighbours[k][0],j + neighbours[k][1]):
                 continue
 
-              tile_node_path = self.level_node_path.attachNewNode(make_node(level.get_tile(i,j).wall_model))
+              tile_node_path = node_parent.attachNewNode(make_node(level.get_tile(i,j).wall_model,"wall " + coordinate_string))
               tile_node_path.setPos(j + offsets[k][1],i + offsets[k][0],0)
               tile_node_path.setHpr(90,90,rotations[k])
 
         if level.get_tile(i,j).ceiling:
-          tile_node_path = self.level_node_path.attachNewNode(make_node(level.get_tile(i,j).ceiling_model))
+          tile_node_path = node_parent.attachNewNode(make_node(level.get_tile(i,j).ceiling_model,"ceiling " + coordinate_string))
           tile_node_path.setPos(i,level.get_tile(i,j).ceiling_height,j)
 
-    self.level_node_path.flattenLight()             # for optimisation => level geometry won't change
+    # optimisation: group the sublevel nodes together:
 
+    for j in range(len(level_subnodes)):
+      for i in range(len(level_subnodes[0])):
+        level_subnodes[i][j].flattenStrong()
+        
     # add props to the level:
 
     prop_counter = 0
@@ -604,6 +615,8 @@ class Game(ShowBase, DirectObject.DirectObject):
         self.run_scripts(prop.scripts_load,event_type="load",caller=prop)
       except Exception:
         pass
+        
+    self.render.ls()         # DELETE THIS LATER
         
   ## Runs given game script in the current context.
   #  @param filename name of the script (including extension but without the resource path)
