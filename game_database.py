@@ -14,17 +14,11 @@ class NPCType:
 
 class GameDatabase:
   def __init__(self):
-    self.items_types = []
-    self.npc_types = []
+    self.item_types = {}
+    self.npc_types = {}
     
   def get_item_types(self):
     return self.item_types
   
   def get_npc_types(self):
     return self.npc_types
-  
-  def add_item_type(self, item_type):
-    self.item_types.append(item_type)
-    
-  def add_npc_type(self, npc_type):
-    self.item_types.append(npc_type)
