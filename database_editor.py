@@ -56,11 +56,19 @@ class ItemTab(Tab):
     line += 1
     self.add_text_input("name",0,line)
     line += 1
+    self.add_label("model name",0,line)
+    line += 1
+    self.add_text_input("model",0,line)
+    line += 1
+    self.add_label("texture name",0,line)
+    line += 1
+    self.add_text_input("texture",0,line)
+    line += 1
     self.add_button("edit item",0,line,self.on_edit_item_click)
     line += 1
     self.add_button("new item",0,line,self.on_new_item_type_click)
     line += 1
-    self.add_button("delete item",0,line)
+    self.add_button("delete item",0,line,self.on_delte_item_click)
    
     self.listbox = Listbox(self)
     self.listbox.grid(row=0,column=1,rowspan=line + 1)
@@ -88,14 +96,30 @@ class ItemTab(Tab):
     self.update_item_info()
 
   def on_edit_item_click(self):
-    try:
-      item_index = self.listbox.curselection()[0]
-    except Exception:
-      return
+    if self.selected_id != None:
+      selected_item = self.database.get_item_types()[self.selected_id]
+      
+      new_id = self.get_text_value("id")
+      
+      selected_item.name = self.get_text_value("name")
+      selected_item.model_name = self.get_text_value("model")
+      selected_item.texture_name = self.get_text_value("texture")
+      
+      self.database.get_item_types().pop(self.selected_id,None)
+      self.database.get_item_types()[new_id] = selected_item
+      
+      self.selected_id = new_id
+      
+      self.update_item_info()
+      self.update_listbox()
     
-    print(item_index)
+  def on_delte_item_click(self):
+    if self.selected_id != None:
+      self.database.get_item_types().pop(self.selected_id,None)
+      self.selected_id = None
     
     self.update_listbox()
+    self.update_item_info()
     
   def update_listbox(self):
     items = self.database.get_item_types()
@@ -114,6 +138,13 @@ class ItemTab(Tab):
       
       self.set_text_value("id",self.selected_id)
       self.set_text_value("name",selected_item.name)
+      self.set_text_value("model",selected_item.model_name)
+      self.set_text_value("texture",selected_item.texture_name)
+    else:
+      self.set_text_value("id","")
+      self.set_text_value("name","")
+      self.set_text_value("model","")
+      self.set_text_value("texture","")
 
 class NPCTab(Tab):
   def __init__(self, parent, database):

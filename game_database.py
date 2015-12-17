@@ -3,6 +3,8 @@
 class ItemType:
   def __init__(self):
     self.name = ""
+    self.model_name = ""
+    self.texture_name = ""
 
 ## Describes an NPC (such as a town guard, a forest troll etc.).
 
