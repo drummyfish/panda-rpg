@@ -5,8 +5,47 @@ import math
 from general import *
 from level import *
 
-## Decorator for widget tooltips.
+## Frame that can be scrolled.
+class ScrolledFrame(Frame):
+  def __init__(self, parent, *args, **kw):
+    Frame.__init__(self, parent, *args, **kw)
+    
+    # create a canvas object and a vertical scrollbar for scrolling it
 
+    vscrollbar = Scrollbar(self,orient=VERTICAL)
+    vscrollbar.pack(fill=Y,side=RIGHT,expand=FALSE)
+    
+    hscrollbar = Scrollbar(self,orient=HORIZONTAL)
+    hscrollbar.pack(fill=X,side=BOTTOM,expand=FALSE)
+    
+    canvas = Canvas(self,bd=0,highlightthickness=0,yscrollcommand=vscrollbar.set,xscrollcommand=hscrollbar.set)
+    canvas.pack(side=LEFT,fill=BOTH,expand=TRUE)
+    
+    vscrollbar.config(command=canvas.yview)
+    hscrollbar.config(command=canvas.xview)
+    
+    # reset the view
+    canvas.xview_moveto(0)
+    canvas.yview_moveto(0)
+    # create a frame inside the canvas which will be scrolled with it
+    self.interior = interior = Frame(canvas)
+    interior_id = canvas.create_window(0,0,window=interior,anchor=NW)
+    
+    # track changes to the canvas and frame width and sync them, also updating the scrollbar
+    
+    def _configure_interior(event):
+      # update the scrollbars to match the size of the inner frame
+      size = (interior.winfo_reqwidth(),interior.winfo_reqheight())
+      canvas.config(scrollregion="0 0 %s %s" % size)
+    
+    interior.bind('<Configure>',_configure_interior)
+    
+    def _configure_canvas(event):
+      return
+
+    canvas.bind('<Configure>',_configure_canvas)
+
+## Decorator for widget tooltips.
 class TooltipDecorator(object):
   def __init__(self, widget, text='widget info'):
     self.widget = widget
@@ -43,7 +82,7 @@ class TooltipDecorator(object):
     if self.top_window:
       self.top_window.destroy()
 
-class MapEditor(Frame):
+class MapEditor(ScrolledFrame):
   TILE_SIZE = 20
   PROP_SIZE = 15         
   SMALL_TILE_SIZE = 14         # for displaying ceiling
@@ -52,7 +91,7 @@ class MapEditor(Frame):
   BORDER_COLOR = "white"       # border color of non selected objects on the map
   
   def __init__(self, parent):
-    Frame.__init__(self, parent)   
+    ScrolledFrame.__init__(self, parent)   
     self.selected_tile = None        ##< selected tile coordinates or None
     self.selected_prop = None        ##< selected prop reference or None
     self.selected_item = None        ##< selected item reference or None
@@ -504,10 +543,10 @@ class MapEditor(Frame):
     column = 0 if left else 3
     row = self.current_row_left if left else self.current_row_right
     
-    self.label_widgets[name] = Label(self, text=name)
+    self.label_widgets[name] = Label(self.interior, text=name)
     self.add_widget(self.label_widgets[name],row,column)
     
-    self.text_widgets[name] = Text(self, height=1, width=30)
+    self.text_widgets[name] = Text(self.interior, height=1, width=30)
     self.add_widget(self.text_widgets[name],row,column + 1,tooltip=tooltip)
     
     if left:
@@ -519,7 +558,7 @@ class MapEditor(Frame):
     column = 0 if left else 3
     row = self.current_row_left if left else self.current_row_right
     
-    self.add_widget(Label(self,text="----------------------"),row,column,1,2,True)
+    self.add_widget(Label(self.interior,text="----------------------"),row,column,1,2,True)
     
     if left:
       self.current_row_left += 1
@@ -530,12 +569,12 @@ class MapEditor(Frame):
     column = 0 if left else 3
     row = self.current_row_left if left else self.current_row_right
     
-    self.label_widgets[name] = Label(self, text=name)
+    self.label_widgets[name] = Label(self.interior, text=name)
     self.add_widget(self.label_widgets[name],row,column)
     
     value = IntVar()
     
-    self.checkbox_widgets[name] = Checkbutton(self,variable=value,command=command)
+    self.checkbox_widgets[name] = Checkbutton(self.interior,variable=value,command=command)
     self.checkbox_widgets[name].value = value
     self.add_widget(self.checkbox_widgets[name],row,column + 1,tooltip=tooltip)
     
@@ -550,7 +589,7 @@ class MapEditor(Frame):
     column = 0 if left else 3
     row = self.current_row_left if left else self.current_row_right
     
-    self.button_widgets[name] = Button(self,text=name,command=command)
+    self.button_widgets[name] = Button(self.interior,text=name,command=command)
     self.add_widget(self.button_widgets[name],row,column,2,1,True,tooltip=tooltip)
         
     if left:
@@ -638,7 +677,7 @@ class MapEditor(Frame):
     self.add_name_check_input("display ceiling height",True,self.redraw_level,left=False,tooltip="If checked, ceiling heights be displayed. NOT IMPLEMENTED YET.")
     self.add_name_check_input("display orientation",False,self.redraw_level,left=False,tooltip="If checked, tile orientations will be displayed as arrows.")
     
-    self.canvas = Canvas(self, width=200, height=100, background="white", borderwidth=2, relief=SUNKEN)
+    self.canvas = Canvas(self.interior, width=200, height=100, background="white", borderwidth=2, relief=SUNKEN)
     self.add_widget(self.canvas,0,2,1,max(self.current_row_left,self.current_row_right) + 1)
     
     self.canvas.bind("<Button-1>", self.on_canvas_click)
