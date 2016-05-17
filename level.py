@@ -34,6 +34,22 @@ class LevelTile:
   def is_empty(self):
     return (self.wall and len(self.wall_model.model_name) == 0) or (not self.wall and len(self.floor_model.model_name) == 0)
     
+## Represents an item placed in the level.
+    
+class LevelItem:
+  def __init__(self, position=[0.0,0.0], orientation=0):
+    self.position = position             ##< (x,y) float position
+    self.orientation = orientation       ##< rotation in degrees
+    self.data = ""                       ##< may contain arbitrary data relevant to the object
+    self.db_id = 0                       ##< ID of the item in the game database
+
+    # scripts (filenames):
+
+    self.scripts_pickup = []             ##< called when the item is picked up
+
+  def copy(self):
+    return copy.deepcopy(self)
+    
 ## Represents a level prop, for example a column. Prop has its position and orientation
 #  but doesnt affect anything in the game and has no colissions.
 
@@ -100,6 +116,7 @@ class Level:
     self.fog_distance = 10
     self.diffuse_lights = [(1.0,1.0,1.0),(0.5,0.5,0.5)]  ##< list of light colors (3-item tuples tuples) that are interpolated between during daytime
     self.props = []
+    self.items = []
     self.name = ""                         ##< level name
 
     for i in range(len(self.layout)):
@@ -136,8 +153,14 @@ class Level:
   def add_prop(self, prop):
     self.props.append(prop)
 
+  def add_item(self, item):
+    self.items.append(item)
+
   def get_props(self):
     return self.props
+
+  def get_items(self):
+    return self.items
 
   def get_width(self):
     return self.width

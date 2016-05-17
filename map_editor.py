@@ -11,15 +11,17 @@ class MapEditor(Frame):
   SMALL_TILE_SIZE = 14         # for displaying ceiling
   PADDING_X = 3
   PADDING_Y = 1
+  BORDER_COLOR = "white"       # border color of non selected objects on the map
   
   def __init__(self, parent):
     Frame.__init__(self, parent)   
     self.selected_tile = None        ##< selected tile coordinates or None
     self.selected_prop = None        ##< selected prop reference or None
+    self.selected_item = None        ##< selected item reference or None
     self.parent = parent
     self.init_ui()
         
-  def on_save_file_clicked(self):
+  def on_save_file_click(self):
     filename = tkFileDialog.asksaveasfilename()
     
     if len(filename) == 0:
@@ -27,7 +29,13 @@ class MapEditor(Frame):
     
     Level.save_to_file(self.level,filename)
    
-  def on_load_file_clicked(self):
+  def on_new_item_click(self):
+    new_item = LevelItem()
+    new_item.position = (1.0,1.0)
+    self.level.add_item(new_item)
+    self.redraw_level()
+   
+  def on_load_file_click(self):
     filename = tkFileDialog.askopenfilename()
     
     if len(filename) == 0:
@@ -67,7 +75,28 @@ class MapEditor(Frame):
     self.level.add_prop(new_prop)
     self.redraw_level()
     
-  def on_delete_prop_click(self):
+  def on_set_prop_item_properties_click(self):
+    if self.selected_item != None:
+      self.set_item_properties()
+    elif self.selected_prop != None:
+      self.set_prop_properties()
+    
+  def set_item_properties(self):
+    if self.selected_item == None:
+      return
+
+    helper_list = self.get_text("item position").split(";")
+    self.selected_item.position = (float(helper_list[0]),float(helper_list[1]))
+    self.selected_item.orientation = float(self.get_text("item orientation"))
+    self.selected_item.data = self.get_text("item data")
+    self.selected_item.db_id = self.get_text("item DB ID")
+    self.selected_item.scripts_pickup = self.string_to_list(self.get_text("scripts - pick up"))
+
+    self.redraw_level()
+    self.update_gui_info()
+    return
+    
+  def on_delete_prop_item_click(self):
     props = self.level.get_props()
     
     for i in range(len(props)):
@@ -79,7 +108,7 @@ class MapEditor(Frame):
     self.redraw_level()
     self.update_gui_info()
 
-  def on_duplicate_prop_click(self):
+  def on_duplicate_prop_item_click(self):
     if self.selected_prop == None:
       return
     
@@ -88,7 +117,7 @@ class MapEditor(Frame):
     self.level.add_prop(new_prop)
     self.redraw_level()
     
-  def on_set_prop_properties_click(self):
+  def set_prop_properties(self):
     if self.selected_prop == None:
       return
     
@@ -99,7 +128,7 @@ class MapEditor(Frame):
     self.selected_prop.model.framerate = float(self.get_text("prop framerate"))
     self.selected_prop.orientation = float(self.get_text("prop orientation"))
     self.selected_prop.caption = self.get_text("caption")
-    self.selected_prop.data = self.get_text("data")
+    self.selected_prop.data = self.get_text("prop data")
     self.selected_prop.scripts_load = self.string_to_list(self.get_text("scripts - load"))
     self.selected_prop.scripts_use = self.string_to_list(self.get_text("scripts - use"))
     self.selected_prop.scripts_examine = self.string_to_list(self.get_text("scripts - examine"))
@@ -107,27 +136,48 @@ class MapEditor(Frame):
     self.redraw_level()
     self.update_gui_info()
     
+  ## Checks if clicked coordinates are near given point, for selection by clicking.
+    
+  def clicked_near(self, clicked_where_coords, near_where_coords):
+    dx = clicked_where_coords[0] - near_where_coords[0]
+    dy = clicked_where_coords[1] - near_where_coords[1]
+    
+    distance = math.sqrt(dx * dx + dy * dy)
+    
+    return distance < 0.7
+    
   def on_canvas_click(self, event):   # left click
     prop_clicked = None
+    item_clicked = None
     
     if self.get_check("display props"):
       for prop in self.level.get_props():
         coordinates = self.pixel_to_world_coordinates(event.x,event.y)
         
-        dx = coordinates[0] - prop.position[0]
-        dy = coordinates[1] - prop.position[1]
-        
-        distance = math.sqrt(dx * dx + dy * dy)
-        
-        if distance < 0.7:
+        if self.clicked_near(coordinates,prop.position):
           prop_clicked = prop
+          break
+        
+    if self.get_check("display items"):
+      for item in self.level.get_items():
+        coordinates = self.pixel_to_world_coordinates(event.x,event.y)
+        
+        if self.clicked_near(coordinates,item.position):
+          item_clicked = item
+          prop_clicked = None
           break
       
     if prop_clicked != None:
       self.selected_prop = prop_clicked
       self.selected_tile = None
+      self.selected_item = None
+    elif item_clicked != None:
+      self.selected_prop = None
+      self.selected_tile = None
+      self.selected_item = item_clicked
     else:
       self.selected_prop = None
+      self.selected_item = None
       self.selected_tile = self.pixel_to_tile_coordinates(event.x,event.y)
     
     self.redraw_level()
@@ -152,11 +202,15 @@ class MapEditor(Frame):
         tile.floor_model.framerate = float(self.get_text("floor framerate"))
         tile.ceiling_model.framerate = float(self.get_text("ceiling framerate"))
         tile.ceiling_height = float(self.get_text("ceiling height"))
-      elif self.selected_prop != None:
-        self.selected_prop.position = self.pixel_to_world_coordinates(event.x,event.y)
+      elif self.selected_prop != None or self.selected_item != None:
+        selected_thing = None
+        selected_thing = self.selected_prop if self.selected_prop != None else selected_thing
+        selected_thing = self.selected_item if self.selected_item != None else selected_thing
+            
+        selected_thing.position = self.pixel_to_world_coordinates(event.x,event.y)
         
         if self.get_check("stick to grid"):
-          self.selected_prop.position = (round(self.selected_prop.position[0] * 2) / 2.0,round(self.selected_prop.position[1] * 2) / 2.0)
+          selected_thing.position = (round(selected_thing.position[0] * 2) / 2.0,round(selected_thing.position[1] * 2) / 2.0)
         
       self.redraw_level()
       self.update_gui_info()
@@ -256,7 +310,7 @@ class MapEditor(Frame):
       self.set_text("prop textures",self.list_to_string(self.selected_prop.model.texture_names))
       self.set_text("prop framerate",str(self.selected_prop.model.framerate))
       self.set_text("caption",str(self.selected_prop.caption))
-      self.set_text("data",str(self.selected_prop.data))
+      self.set_text("prop data",str(self.selected_prop.data))
       self.set_text("scripts - load",self.list_to_string(self.selected_prop.scripts_load))
       self.set_text("scripts - use",self.list_to_string(self.selected_prop.scripts_use))
       self.set_text("scripts - examine",self.list_to_string(self.selected_prop.scripts_examine))
@@ -267,10 +321,23 @@ class MapEditor(Frame):
       self.set_text("prop textures","")
       self.set_text("prop framerate","")
       self.set_text("caption","")
-      self.set_text("data","")
+      self.set_text("prop data","")
       self.set_text("scripts - load","")
       self.set_text("scripts - use","")
       self.set_text("scripts - examine","")
+
+    if self.selected_item != None:
+      self.set_text("item position",str(self.selected_item.position[0]) + ";" + str(self.selected_item.position[1]))
+      self.set_text("item orientation",str(self.selected_item.orientation))
+      self.set_text("item DB ID",str(self.selected_item.db_id))  
+      self.set_text("scripts - pick up",self.list_to_string(self.selected_item.scripts_pickup))
+      self.set_text("item data",self.selected_item.data)
+    else:
+      self.set_text("item position","")
+      self.set_text("item orientation","")
+      self.set_text("item DB ID","")
+      self.set_text("scripts - pick up","")
+      self.set_text("item data","")
       
   ## Returns integer tile coordinates from canvas pixel coordinates.
       
@@ -351,9 +418,11 @@ class MapEditor(Frame):
         if self.selected_tile != None and self.selected_tile[0] == x and self.selected_tile[1] == y:
           self.canvas.create_rectangle(corner1[0], corner1[1], corner2[0], corner2[1], outline="red")
 
+    # draw props:
+    
     if self.get_check("display props"):
       for prop in self.level.get_props():
-        border = "black"
+        border = MapEditor.BORDER_COLOR
       
         if prop == self.selected_prop:
           border = "red"
@@ -363,10 +432,22 @@ class MapEditor(Frame):
         difference = MapEditor.PROP_SIZE / 2
   
         fill_color = self.compute_model_color(prop.model)
-  
         self.canvas.create_oval(position[0] - difference,position[1] - difference, position[0] + difference, position[1] + difference, fill=fill_color, outline=border)
-
         self.canvas.create_line(position[0],position[1],position[0] + int(math.cos(math.radians(prop.orientation)) * difference),position[1] - int(math.sin(math.radians(prop.orientation)) * difference),fill="black")
+  
+    # draw items:
+    
+    if self.get_check("display items"):
+      for item in self.level.get_items():
+        border = MapEditor.BORDER_COLOR
+        
+        if item == self.selected_item:
+          border = "red"
+        
+        position = self.world_to_pixel_coordinates(item.position[0],item.position[1])
+        difference = MapEditor.TILE_SIZE / 2
+      
+        self.canvas.create_polygon(position[0] - difference,position[1] - difference,position[0] + MapEditor.TILE_SIZE - difference,position[1] - difference,position[0] + MapEditor.TILE_SIZE / 2 - difference,position[1] + MapEditor.TILE_SIZE - difference,fill="green",outline=border)
   
 
   ## Adds given widget to given place in grid layout.
@@ -451,8 +532,8 @@ class MapEditor(Frame):
     self.current_row_left = 0
     self.current_row_right = 0
     
-    self.add_button("save file",self.on_save_file_clicked)
-    self.add_button("load file",self.on_load_file_clicked)
+    self.add_button("save file",self.on_save_file_click)
+    self.add_button("load file",self.on_load_file_click)
     self.add_name_value_input("name")
     self.add_name_value_input("skybox textures")
     self.add_name_value_input("daytime colors")
@@ -479,17 +560,13 @@ class MapEditor(Frame):
     self.add_name_check_input("has ceiling")
     
     self.add_button("new prop",self.on_new_prop_click,left=False)
-    self.add_button("duplicate prop",left=False,command=self.on_duplicate_prop_click)
-    self.add_button("delete prop",left=False,command=self.on_delete_prop_click)
-    self.add_button("set prop properties",left=False,command=self.on_set_prop_properties_click)
-    self.add_name_check_input("stick to grid",True,self.redraw_level,left=False)
     self.add_name_value_input("prop position",left=False)
     self.add_name_value_input("prop orientation",left=False)
     self.add_name_value_input("prop model",left=False)
     self.add_name_value_input("prop textures",left=False)
     self.add_name_value_input("prop framerate",left=False)
     self.add_name_value_input("caption",left=False)
-    self.add_name_value_input("data",left=False)
+    self.add_name_value_input("prop data",left=False)
 
     self.add_name_value_input("scripts - load",left=False)
     self.add_name_value_input("scripts - use",left=False)
@@ -497,10 +574,27 @@ class MapEditor(Frame):
     
     self.add_separator(left=False)
     
+    self.add_button("new item",self.on_new_item_click,left=False)
+    self.add_name_value_input("item position",left=False)
+    self.add_name_value_input("item orientation",left=False)
+    self.add_name_value_input("item DB ID",left=False)
+    self.add_name_value_input("scripts - pick up",left=False)
+    self.add_name_value_input("item data",left=False)
+    
+    self.add_separator(left=False)
+
+    self.add_button("set prop/item properties",left=False,command=self.on_set_prop_item_properties_click)
+    self.add_button("duplicate prop/item",left=False,command=self.on_duplicate_prop_item_click)
+    self.add_button("delete prop/item",left=False,command=self.on_delete_prop_item_click)
+    
+    self.add_separator(left=False)
+    
+    self.add_name_check_input("stick to grid",True,self.redraw_level,left=False)
     self.add_name_check_input("display texture",True,self.redraw_level,left=False)
     self.add_name_check_input("display model",True,self.redraw_level,left=False)
     self.add_name_check_input("display ceiling",True,self.redraw_level,left=False)
     self.add_name_check_input("display props",True,self.redraw_level,left=False)
+    self.add_name_check_input("display items",True,self.redraw_level,left=False)
     self.add_name_check_input("display ceiling height",True,self.redraw_level,left=False)
     self.add_name_check_input("display orientation",False,self.redraw_level,left=False)
     
