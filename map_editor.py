@@ -5,6 +5,44 @@ import math
 from general import *
 from level import *
 
+## Decorator for widget tooltips.
+
+class TooltipDecorator(object):
+  def __init__(self, widget, text='widget info'):
+    self.widget = widget
+    self.text = text
+    self.widget.bind("<Enter>",self.enter)
+    self.widget.bind("<Leave>",self.close)
+    self.top_window = None
+
+  def enter(self, event=None):
+    bouding_box = self.widget.bbox("insert")
+    
+    if bouding_box == None:
+      return
+    
+    x = bouding_box[0]
+    y = bouding_box[1]
+    cx = bouding_box[2]
+    cy = bouding_box[3]
+    
+    x += self.widget.winfo_rootx() + 25
+    y += self.widget.winfo_rooty() + 20
+    
+    self.top_window = Toplevel(self.widget)
+    
+    # Leaves only the label and removes the app window
+    self.top_window.wm_overrideredirect(True)
+    self.top_window.wm_geometry("+%d+%d" % (x, y))
+    label = Label(self.top_window, text=self.text, justify='left',
+                       background="white", relief='solid', borderwidth=1,
+                       font=("times", "12", "normal"))
+    label.pack(ipadx=1)
+
+  def close(self, event=None):
+    if self.top_window:
+      self.top_window.destroy()
+
 class MapEditor(Frame):
   TILE_SIZE = 20
   PROP_SIZE = 15         
@@ -449,18 +487,20 @@ class MapEditor(Frame):
       
         self.canvas.create_polygon(position[0] - difference,position[1] - difference,position[0] + MapEditor.TILE_SIZE - difference,position[1] - difference,position[0] + MapEditor.TILE_SIZE / 2 - difference,position[1] + MapEditor.TILE_SIZE - difference,fill="green",outline=border)
   
-
   ## Adds given widget to given place in grid layout.
 
-  def add_widget(self, widget, grid_x, grid_y, column_span=1, row_span=1, spread_x=False):
+  def add_widget(self, widget, grid_x, grid_y, column_span=1, row_span=1, spread_x=False, tooltip=""):
     stick = W + N
     
     if spread_x:
       stick = stick + E
     
     widget.grid(row=grid_x, column=grid_y, rowspan=row_span, columnspan=column_span, padx=MapEditor.PADDING_X, pady=MapEditor.PADDING_Y, sticky=stick)
+
+    if len(tooltip) != 0:   # add tooltip
+      widget.tooltip_decorator = TooltipDecorator(widget,text=tooltip)
      
-  def add_name_value_input(self, name, left=True):
+  def add_name_value_input(self, name, left=True, tooltip=""):
     column = 0 if left else 3
     row = self.current_row_left if left else self.current_row_right
     
@@ -468,7 +508,7 @@ class MapEditor(Frame):
     self.add_widget(self.label_widgets[name],row,column)
     
     self.text_widgets[name] = Text(self, height=1, width=30)
-    self.add_widget(self.text_widgets[name],row,column + 1)
+    self.add_widget(self.text_widgets[name],row,column + 1,tooltip=tooltip)
     
     if left:
       self.current_row_left += 1
@@ -486,7 +526,7 @@ class MapEditor(Frame):
     else:
       self.current_row_right += 1
     
-  def add_name_check_input(self, name, checked=False, command=None, left=True):
+  def add_name_check_input(self, name, checked=False, command=None, left=True, tooltip=""):
     column = 0 if left else 3
     row = self.current_row_left if left else self.current_row_right
     
@@ -497,7 +537,7 @@ class MapEditor(Frame):
     
     self.checkbox_widgets[name] = Checkbutton(self,variable=value,command=command)
     self.checkbox_widgets[name].value = value
-    self.add_widget(self.checkbox_widgets[name],row,column + 1)
+    self.add_widget(self.checkbox_widgets[name],row,column + 1,tooltip=tooltip)
     
     self.set_check(name,checked)
     
@@ -506,12 +546,12 @@ class MapEditor(Frame):
     else:
       self.current_row_right += 1
       
-  def add_button(self, name, command=None, left=True):
+  def add_button(self, name, command=None, left=True, tooltip=""):
     column = 0 if left else 3
     row = self.current_row_left if left else self.current_row_right
     
     self.button_widgets[name] = Button(self,text=name,command=command)
-    self.add_widget(self.button_widgets[name],row,column,2,1,True)
+    self.add_widget(self.button_widgets[name],row,column,2,1,True,tooltip=tooltip)
         
     if left:
       self.current_row_left += 1
@@ -532,71 +572,71 @@ class MapEditor(Frame):
     self.current_row_left = 0
     self.current_row_right = 0
     
-    self.add_button("save file",self.on_save_file_click)
-    self.add_button("load file",self.on_load_file_click)
-    self.add_name_value_input("name")
-    self.add_name_value_input("skybox textures")
-    self.add_name_value_input("daytime colors")
-    self.add_name_value_input("ambient light amount")
-    self.add_name_value_input("fog color")
-    self.add_name_value_input("fog distance")
-    self.add_name_value_input("width")
-    self.add_name_value_input("height")
-    self.add_button("set map info",self.on_set_map_info_click)
-    self.add_name_value_input("tile coordinates")
-    self.add_name_value_input("wall model")
-    self.add_name_value_input("wall textures")
-    self.add_name_value_input("wall framerate")
-    self.add_name_value_input("floor model")
-    self.add_name_value_input("floor textures")
-    self.add_name_value_input("floor framerate")
-    self.add_name_value_input("ceiling model")
-    self.add_name_value_input("ceiling textures")
-    self.add_name_value_input("ceiling framerate")
-    self.add_name_value_input("ceiling height")
-    self.add_name_value_input("orientation")
-    self.add_name_check_input("is wall",command=self.on_is_wall_click)
-    self.add_name_check_input("is steppable")
-    self.add_name_check_input("has ceiling")
+    self.add_button("save file",self.on_save_file_click,tooltip="Saves the map to file.")
+    self.add_button("load file",self.on_load_file_click,tooltip="Loads a map from file.")
+    self.add_name_value_input("name",tooltip="Map name.")
+    self.add_name_value_input("skybox textures",tooltip="Semicolon separated filenames of skybox textures that will be cycled through during each day.")
+    self.add_name_value_input("daytime colors",tooltip="Semicolon separated colors in format (R,G,B) where each component is\n0.0 - 1.0, e.g. \"(0,0.5,0);(1,1,0.7)\". Colors will be cycled thorough during each day.")
+    self.add_name_value_input("ambient light amount",tooltip="Number 0 - 1 specifying how much ambient light there will be.")
+    self.add_name_value_input("fog color",tooltip="Color in format (R,G,B) where each component is number 0 - 1.")
+    self.add_name_value_input("fog distance",tooltip="How far the fog will be.")
+    self.add_name_value_input("width",tooltip="Map width in squares.")
+    self.add_name_value_input("height",tooltip="Map height in squares.")
+    self.add_button("set map info",self.on_set_map_info_click,tooltip="Applies the above entered map info.")
+    self.add_name_value_input("tile coordinates",tooltip="Selected tile coordinates, read only.")
+    self.add_name_value_input("wall model",tooltip="Filename of the wall model, if the selected tile is wall.")
+    self.add_name_value_input("wall textures",tooltip="Semicolon separated filenames of textures for the wall model. The\n textures will be cycled through with given frequency.")
+    self.add_name_value_input("wall framerate",tooltip="How fast the wall textures will be changed.")
+    self.add_name_value_input("floor model",tooltip="Filename of the floor model, if the selected tile is floor.")
+    self.add_name_value_input("floor textures",tooltip="Semicolon separated filenames of textures for the floor model. The\n textures will be cycled through with given frequency.")
+    self.add_name_value_input("floor framerate",tooltip="How fast the floor textures will be changed.")
+    self.add_name_value_input("ceiling model",tooltip="Filename of the ceiling model, if the selected tile has a ceiling.")
+    self.add_name_value_input("ceiling textures",tooltip="Semicolon separated filenames of textures for the ceiling model. The\n textures will be cycled through with given frequency.")
+    self.add_name_value_input("ceiling framerate",tooltip="How fast the ceiling textures will be changed.")
+    self.add_name_value_input("ceiling height",tooltip="Height of the ceiling above the ground.")
+    self.add_name_value_input("orientation",tooltip="Orientation of the tile. This can be used to rotate the tile by 90 degrees steps. Values: 0 = up, 1 = right, 2 = down, 3 = left.")
+    self.add_name_check_input("is wall",command=self.on_is_wall_click,tooltip="Whether the selected tile is wall (will be floor if unchecked).")
+    self.add_name_check_input("is steppable",tooltip="Whether the tile can be walked on.")
+    self.add_name_check_input("has ceiling",tooltip="Whether the tile has a ceiling above it.")
     
-    self.add_button("new prop",self.on_new_prop_click,left=False)
-    self.add_name_value_input("prop position",left=False)
-    self.add_name_value_input("prop orientation",left=False)
-    self.add_name_value_input("prop model",left=False)
-    self.add_name_value_input("prop textures",left=False)
-    self.add_name_value_input("prop framerate",left=False)
-    self.add_name_value_input("caption",left=False)
-    self.add_name_value_input("prop data",left=False)
+    self.add_button("new prop",self.on_new_prop_click,left=False,tooltip="Creates a new prop.")
+    self.add_name_value_input("prop position",left=False,tooltip="Position of the prop in tiles (doesn't have to be integer).")
+    self.add_name_value_input("prop orientation",left=False,tooltip="Prop rotation in degrees CCW.")
+    self.add_name_value_input("prop model",left=False,tooltip="Filename of the prop model.")
+    self.add_name_value_input("prop textures",left=False,tooltip="Semicolon separated list of filenames for the prop model. The\n textures will be cycled through with given frequency.")
+    self.add_name_value_input("prop framerate",left=False,tooltip="How fast the prop textures will be changed.")
+    self.add_name_value_input("caption",left=False,tooltip="Ingame prop caption that will appear when player looks at it.")
+    self.add_name_value_input("prop data",left=False,tooltip="String data of the prop, can be used to store data for use in scripts.")
 
-    self.add_name_value_input("scripts - load",left=False)
-    self.add_name_value_input("scripts - use",left=False)
-    self.add_name_value_input("scripts - examine",left=False)    
+    self.add_name_value_input("scripts - load",left=False,tooltip="Filename of a script that will be run when the prop is loaded.")
+    self.add_name_value_input("scripts - use",left=False,tooltip="Filename of a script that will be run when the prop is used.")
+    self.add_name_value_input("scripts - examine",left=False,tooltip="Filename of a script that will be run when the prop is looked at.")
     
     self.add_separator(left=False)
     
-    self.add_button("new item",self.on_new_item_click,left=False)
-    self.add_name_value_input("item position",left=False)
-    self.add_name_value_input("item orientation",left=False)
-    self.add_name_value_input("item DB ID",left=False)
-    self.add_name_value_input("scripts - pick up",left=False)
-    self.add_name_value_input("item data",left=False)
+    self.add_button("new item",self.on_new_item_click,left=False,tooltip="Creates a new item.")
+    self.add_name_value_input("item position",left=False,tooltip="Item position in tiles (doesn't have to be integer).")
+    self.add_name_value_input("item orientation",left=False,tooltip="Item rotation in degrees CCW.")
+    self.add_name_value_input("item DB ID",left=False,tooltip="Database ID of the concrete item this item will represent.")
+    self.add_name_value_input("scripts - pick up",left=False,tooltip="Filename of a script that will be run when the item is picked up.")
+    self.add_name_value_input("item data",left=False,tooltip="String data of the item, can be used to store data for use in scripts.")
     
     self.add_separator(left=False)
 
-    self.add_button("set prop/item properties",left=False,command=self.on_set_prop_item_properties_click)
-    self.add_button("duplicate prop/item",left=False,command=self.on_duplicate_prop_item_click)
-    self.add_button("delete prop/item",left=False,command=self.on_delete_prop_item_click)
+    self.add_button("set prop/item properties",left=False,command=self.on_set_prop_item_properties_click,tooltip="Sets the data entered above for currently selected item or prop.")
+    self.add_button("duplicate prop/item",left=False,command=self.on_duplicate_prop_item_click,tooltip="Duplicates currently selected prop or item.")
+    self.add_button("delete prop/item",left=False,command=self.on_delete_prop_item_click,tooltip="Deletes currently selected prop or item.")
     
     self.add_separator(left=False)
     
-    self.add_name_check_input("stick to grid",True,self.redraw_level,left=False)
-    self.add_name_check_input("display texture",True,self.redraw_level,left=False)
-    self.add_name_check_input("display model",True,self.redraw_level,left=False)
-    self.add_name_check_input("display ceiling",True,self.redraw_level,left=False)
-    self.add_name_check_input("display props",True,self.redraw_level,left=False)
-    self.add_name_check_input("display items",True,self.redraw_level,left=False)
-    self.add_name_check_input("display ceiling height",True,self.redraw_level,left=False)
-    self.add_name_check_input("display orientation",False,self.redraw_level,left=False)
+    self.add_name_check_input("stick to grid",True,self.redraw_level,left=False,tooltip="If checked, props and items will stick to a grid when moved.")
+    self.add_name_check_input("display texture",True,self.redraw_level,left=False,tooltip="If checked, texture names will affect the color of the objects in editor.")
+    self.add_name_check_input("display model",True,self.redraw_level,left=False,tooltip="If checked, model names will affect the color of the objects in editor.")
+    self.add_name_check_input("display ceiling",True,self.redraw_level,left=False,tooltip="If checked, ceilings will be displayed.")
+    self.add_name_check_input("display props",True,self.redraw_level,left=False,tooltip="If checked, props will be displayed.")
+    self.add_name_check_input("display items",True,self.redraw_level,left=False,tooltip="If checked, items will be displayed.")
+    self.add_name_check_input("display ceiling height",True,self.redraw_level,left=False,tooltip="If checked, ceiling heights be displayed. NOT IMPLEMENTED YET.")
+    self.add_name_check_input("display orientation",False,self.redraw_level,left=False,tooltip="If checked, tile orientations will be displayed as arrows.")
     
     self.canvas = Canvas(self, width=200, height=100, background="white", borderwidth=2, relief=SUNKEN)
     self.add_widget(self.canvas,0,2,1,max(self.current_row_left,self.current_row_right) + 1)
