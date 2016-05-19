@@ -5,6 +5,61 @@ import math
 from general import *
 from level import *
 
+## Serves as an input for AnimatedTextureModel info.
+class AnimatedTextureModelInput(Frame):
+  def __init__(self, parent, *args, **kw):
+    Frame.__init__(self, parent, relief=GROOVE, borderwidth=2)
+    
+    self.label_model = Label(self,text="model name")
+    self.input_model = Text(self,height=1,width=30)
+    self.tooltip_model = TooltipDecorator(self.input_model,"Model filename.")
+    
+    self.label_textures = Label(self,text="texture names")
+    self.input_textures = Text(self,height=1,width=30)
+    self.tooltip_textures = TooltipDecorator(self.input_textures,"Semicolon separated texture filenames.\nThe textures will be cycled through with specified framerate.")
+    
+    self.label_framerate = Label(self,text="texture framerate")
+    self.input_framerate = Text(self,height=1,width=30)
+    self.tooltip_framerate = TooltipDecorator(self.input_framerate,"How fast the textures will be changed.")
+    
+    self.label_model.pack()
+    self.input_model.pack()
+    self.label_textures.pack()
+    self.input_textures.pack()
+    self.label_framerate.pack()
+    self.input_framerate.pack()
+    
+  def clear(self):
+    self.input_model.delete("1.0",END)
+    self.input_textures.delete("1.0",END)
+    self.input_framerate.delete("1.0",END)
+    
+  ## Returns list of texture names.
+  def get_textures(self):
+    text = self.input_textures.get("1.0",END).replace("\n","")
+    return text.split(";")
+    
+  def get_model(self):
+    text = self.input_model.get("1.0",END).replace("\n","")
+    return text
+  
+  def get_framerate(self):
+    text = self.input_framerate.get("1.0",END).replace("\n","")
+    return float(text)
+  
+  ## Fills the widget with info from given model.
+  def set_model(self,animated_texture_model):
+    self.clear()
+    self.input_model.insert("1.0",animated_texture_model.model_name)
+    self.input_textures.insert("1.0",MapEditor.list_to_string(animated_texture_model.texture_names))
+    self.input_framerate.insert("1.0",animated_texture_model.framerate)
+
+  ## Sets the properties of given model by values in the widget.
+  def fill_model(self,animated_texture_model):
+    animated_texture_model.model_name = self.get_model()
+    animated_texture_model.texture_names = self.get_textures()
+    animated_texture_model.framerate = self.get_framerate()
+
 ## Frame that can be scrolled.
 class ScrolledFrame(Frame):
   def __init__(self, parent, *args, **kw):
@@ -127,7 +182,7 @@ class MapEditor(ScrolledFrame):
    
   def on_set_map_info_click(self):
     self.level.set_name(self.get_text("name"))
-    self.level.set_skybox_textures(self.string_to_list(self.get_text("skybox textures")))
+    self.level.set_skybox_textures(MapEditor.string_to_list(self.get_text("skybox textures")))
     diffuse_lights = self.get_text("daytime colors").replace(" ", "").split(";")
    
     for i in range(len(diffuse_lights)):
@@ -167,7 +222,7 @@ class MapEditor(ScrolledFrame):
     self.selected_item.orientation = float(self.get_text("item orientation"))
     self.selected_item.data = self.get_text("item data")
     self.selected_item.db_id = self.get_text("item DB ID")
-    self.selected_item.scripts_pickup = self.string_to_list(self.get_text("scripts - pick up"))
+    self.selected_item.scripts_pickup = MapEditor.string_to_list(self.get_text("scripts - pick up"))
 
     self.redraw_level()
     self.update_gui_info()
@@ -200,15 +255,13 @@ class MapEditor(ScrolledFrame):
     
     helper_list = self.get_text("prop position").split(";")
     self.selected_prop.position = (float(helper_list[0]),float(helper_list[1]))
-    self.selected_prop.model.model_name = self.get_text("prop model")
-    self.selected_prop.model.texture_names = self.string_to_list(self.get_text("prop textures"))
-    self.selected_prop.model.framerate = float(self.get_text("prop framerate"))
+    self.model_widgets["prop model"].fill_model(self.selected_prop.model)
     self.selected_prop.orientation = float(self.get_text("prop orientation"))
     self.selected_prop.caption = self.get_text("caption")
     self.selected_prop.data = self.get_text("prop data")
-    self.selected_prop.scripts_load = self.string_to_list(self.get_text("scripts - load"))
-    self.selected_prop.scripts_use = self.string_to_list(self.get_text("scripts - use"))
-    self.selected_prop.scripts_examine = self.string_to_list(self.get_text("scripts - examine"))
+    self.selected_prop.scripts_load = MapEditor.string_to_list(self.get_text("scripts - load"))
+    self.selected_prop.scripts_use = MapEditor.string_to_list(self.get_text("scripts - use"))
+    self.selected_prop.scripts_examine = MapEditor.string_to_list(self.get_text("scripts - examine"))
     
     self.redraw_level()
     self.update_gui_info()
@@ -267,17 +320,11 @@ class MapEditor(ScrolledFrame):
         tile = self.level.get_tile(clicked_tile[0],clicked_tile[1])
         tile.wall = self.get_check("is wall")
         tile.ceiling = self.get_check("has ceiling")
-        tile.wall_model.model_name = self.get_text("wall model")
-        tile.wall_model.texture_names = self.string_to_list(self.get_text("wall textures"))
-        tile.floor_model.texture_names = self.string_to_list(self.get_text("floor textures"))
-        tile.ceiling_model.texture_names = self.string_to_list(self.get_text("ceiling textures"))
-        tile.floor_model.model_name = self.get_text("floor model")
-        tile.ceiling_model.model_name = self.get_text("ceiling model")
+        self.model_widgets["wall model"].fill_model(tile.wall_model)
+        self.model_widgets["floor model"].fill_model(tile.floor_model)
+        self.model_widgets["ceiling model"].fill_model(tile.ceiling_model)
         tile.floor_orientation = int(self.get_text("orientation"))
         tile.steppable = self.get_check("is steppable")
-        tile.wall_model.framerate = float(self.get_text("wall framerate"))
-        tile.floor_model.framerate = float(self.get_text("floor framerate"))
-        tile.ceiling_model.framerate = float(self.get_text("ceiling framerate"))
         tile.ceiling_height = float(self.get_text("ceiling height"))
       elif self.selected_prop != None or self.selected_item != None:
         selected_thing = None
@@ -316,7 +363,8 @@ class MapEditor(ScrolledFrame):
   def get_check(self, name):
     return self.checkbox_widgets[name].value.get() == True
     
-  def list_to_string(self, input_list):
+  @staticmethod
+  def list_to_string(input_list):
     result = ""
     
     first = True
@@ -331,7 +379,8 @@ class MapEditor(ScrolledFrame):
     
     return result
     
-  def string_to_list(self, input_string):
+  @staticmethod
+  def string_to_list(input_string):
     return [] if len(input_string.strip()) == 0 else input_string.split(";")
     
   ## Updates the info in GUI, i.e. selected tile information etc.
@@ -341,23 +390,18 @@ class MapEditor(ScrolledFrame):
     self.set_text("height",str(self.level.get_height()))
     self.set_text("name",self.level.get_name())
     self.set_text("ambient light amount",str(self.level.get_ambient_light_amount()))
-    self.set_text("skybox textures",self.list_to_string(self.level.get_skybox_textures()))
-    self.set_text("daytime colors",self.list_to_string(self.level.get_diffuse_lights()).replace(" ",""))
+    self.set_text("skybox textures",MapEditor.list_to_string(self.level.get_skybox_textures()))
+    self.set_text("daytime colors",MapEditor.list_to_string(self.level.get_diffuse_lights()).replace(" ",""))
     self.set_text("fog color",self.color_to_string(self.level.get_fog_color()))
     self.set_text("fog distance",float(self.level.get_fog_distance()))
     
     if self.selected_tile != None:
       tile = self.level.get_tile(self.selected_tile[0],self.selected_tile[1])
       self.set_text("tile coordinates",str(self.selected_tile[0]) + ";" + str(self.selected_tile[1]))
-      self.set_text("wall model",tile.wall_model.model_name)
-      self.set_text("wall textures",self.list_to_string(tile.wall_model.texture_names))      
-      self.set_text("wall framerate",str(tile.wall_model.framerate))
-      self.set_text("floor framerate",str(tile.floor_model.framerate))
-      self.set_text("ceiling framerate",str(tile.ceiling_model.framerate))
-      self.set_text("floor model",tile.floor_model.model_name)
-      self.set_text("floor textures",self.list_to_string(tile.floor_model.texture_names))
-      self.set_text("ceiling model",tile.ceiling_model.model_name)
-      self.set_text("ceiling textures",self.list_to_string(tile.ceiling_model.texture_names))
+ 
+      self.model_widgets["wall model"].set_model(tile.wall_model)
+      self.model_widgets["floor model"].set_model(tile.floor_model)
+      self.model_widgets["ceiling model"].set_model(tile.ceiling_model)
       self.set_text("ceiling height",str(tile.ceiling_height))
       self.set_text("orientation",str(tile.floor_orientation))
       self.set_check("is wall",tile.wall)
@@ -365,15 +409,9 @@ class MapEditor(ScrolledFrame):
       self.set_check("has ceiling",tile.ceiling)
     else:
       self.set_text("tile coordinates","")
-      self.set_text("wall model","")
-      self.set_text("wall textures","")
-      self.set_text("wall framerate","")
-      self.set_text("floor framerate","")
-      self.set_text("ceiling framerate","")
-      self.set_text("floor model","")
-      self.set_text("floor textures","")
-      self.set_text("ceiling model","")
-      self.set_text("ceiling textures","")
+      self.model_widgets["wall model"].clear()
+      self.model_widgets["floor model"].clear()
+      self.model_widgets["ceiling model"].clear()
       self.set_text("ceiling height","")
       self.set_text("orientation","")
       self.set_check("is wall",False)
@@ -383,20 +421,26 @@ class MapEditor(ScrolledFrame):
     if self.selected_prop != None:
       self.set_text("prop position",str(self.selected_prop.position[0]) + ";" + str(self.selected_prop.position[1]))
       self.set_text("prop orientation",str(self.selected_prop.orientation))
-      self.set_text("prop model",self.selected_prop.model.model_name)
-      self.set_text("prop textures",self.list_to_string(self.selected_prop.model.texture_names))
-      self.set_text("prop framerate",str(self.selected_prop.model.framerate))
+#      self.set_text("prop model",self.selected_prop.model.model_name)
+#      self.set_text("prop textures",MapEditor.list_to_string(self.selected_prop.model.texture_names))
+#      self.set_text("prop framerate",str(self.selected_prop.model.framerate))
+
+      self.model_widgets["prop model"].set_model(self.selected_prop.model)
+
       self.set_text("caption",str(self.selected_prop.caption))
       self.set_text("prop data",str(self.selected_prop.data))
-      self.set_text("scripts - load",self.list_to_string(self.selected_prop.scripts_load))
-      self.set_text("scripts - use",self.list_to_string(self.selected_prop.scripts_use))
-      self.set_text("scripts - examine",self.list_to_string(self.selected_prop.scripts_examine))
+      self.set_text("scripts - load",MapEditor.list_to_string(self.selected_prop.scripts_load))
+      self.set_text("scripts - use",MapEditor.list_to_string(self.selected_prop.scripts_use))
+      self.set_text("scripts - examine",MapEditor.list_to_string(self.selected_prop.scripts_examine))
     else:
       self.set_text("prop position","")
       self.set_text("prop orientation","")
-      self.set_text("prop model","")
-      self.set_text("prop textures","")
-      self.set_text("prop framerate","")
+
+      self.model_widgets["prop model"].clear()
+
+#      self.set_text("prop model","")
+#      self.set_text("prop textures","")
+#      self.set_text("prop framerate","")
       self.set_text("caption","")
       self.set_text("prop data","")
       self.set_text("scripts - load","")
@@ -407,7 +451,7 @@ class MapEditor(ScrolledFrame):
       self.set_text("item position",str(self.selected_item.position[0]) + ";" + str(self.selected_item.position[1]))
       self.set_text("item orientation",str(self.selected_item.orientation))
       self.set_text("item DB ID",str(self.selected_item.db_id))  
-      self.set_text("scripts - pick up",self.list_to_string(self.selected_item.scripts_pickup))
+      self.set_text("scripts - pick up",MapEditor.list_to_string(self.selected_item.scripts_pickup))
       self.set_text("item data",self.selected_item.data)
     else:
       self.set_text("item position","")
@@ -584,6 +628,21 @@ class MapEditor(ScrolledFrame):
       self.current_row_left += 1
     else:
       self.current_row_right += 1
+
+  def add_name_model_input(self, name, command=None, left=True, tooltip=""):
+    column = 0 if left else 3
+    row = self.current_row_left if left else self.current_row_right
+    
+    self.label_widgets[name] = Label(self.interior,text=name)
+    self.add_widget(self.label_widgets[name],row,column,tooltip=tooltip)
+   
+    self.model_widgets[name] = AnimatedTextureModelInput(self.interior)
+    self.add_widget(self.model_widgets[name],row,column + 1)
+    
+    if left:
+      self.current_row_left += 1
+    else:
+      self.current_row_right += 1
       
   def add_button(self, name, command=None, left=True, tooltip=""):
     column = 0 if left else 3
@@ -607,6 +666,7 @@ class MapEditor(ScrolledFrame):
     self.text_widgets = {}
     self.checkbox_widgets = {}
     self.button_widgets = {}
+    self.model_widgets = {}
     
     self.current_row_left = 0
     self.current_row_right = 0
@@ -623,15 +683,11 @@ class MapEditor(ScrolledFrame):
     self.add_name_value_input("height",tooltip="Map height in squares.")
     self.add_button("set map info",self.on_set_map_info_click,tooltip="Applies the above entered map info.")
     self.add_name_value_input("tile coordinates",tooltip="Selected tile coordinates, read only.")
-    self.add_name_value_input("wall model",tooltip="Filename of the wall model, if the selected tile is wall.")
-    self.add_name_value_input("wall textures",tooltip="Semicolon separated filenames of textures for the wall model. The\n textures will be cycled through with given frequency.")
-    self.add_name_value_input("wall framerate",tooltip="How fast the wall textures will be changed.")
-    self.add_name_value_input("floor model",tooltip="Filename of the floor model, if the selected tile is floor.")
-    self.add_name_value_input("floor textures",tooltip="Semicolon separated filenames of textures for the floor model. The\n textures will be cycled through with given frequency.")
-    self.add_name_value_input("floor framerate",tooltip="How fast the floor textures will be changed.")
-    self.add_name_value_input("ceiling model",tooltip="Filename of the ceiling model, if the selected tile has a ceiling.")
-    self.add_name_value_input("ceiling textures",tooltip="Semicolon separated filenames of textures for the ceiling model. The\n textures will be cycled through with given frequency.")
-    self.add_name_value_input("ceiling framerate",tooltip="How fast the ceiling textures will be changed.")
+
+    self.add_name_model_input("wall model",command=None,left=True,tooltip="Wall model, if the tile is wall.")
+    self.add_name_model_input("floor model",command=None,left=True,tooltip="Floor model, if the tile is floor.")
+    self.add_name_model_input("ceiling model",command=None,left=True,tooltip="Ceiling model, if the tile has one.")
+
     self.add_name_value_input("ceiling height",tooltip="Height of the ceiling above the ground.")
     self.add_name_value_input("orientation",tooltip="Orientation of the tile. This can be used to rotate the tile by 90 degrees steps. Values: 0 = up, 1 = right, 2 = down, 3 = left.")
     self.add_name_check_input("is wall",command=self.on_is_wall_click,tooltip="Whether the selected tile is wall (will be floor if unchecked).")
@@ -641,9 +697,9 @@ class MapEditor(ScrolledFrame):
     self.add_button("new prop",self.on_new_prop_click,left=False,tooltip="Creates a new prop.")
     self.add_name_value_input("prop position",left=False,tooltip="Position of the prop in tiles (doesn't have to be integer).")
     self.add_name_value_input("prop orientation",left=False,tooltip="Prop rotation in degrees CCW.")
-    self.add_name_value_input("prop model",left=False,tooltip="Filename of the prop model.")
-    self.add_name_value_input("prop textures",left=False,tooltip="Semicolon separated list of filenames for the prop model. The\n textures will be cycled through with given frequency.")
-    self.add_name_value_input("prop framerate",left=False,tooltip="How fast the prop textures will be changed.")
+
+    self.add_name_model_input("prop model",command=None,left=False,tooltip="Prop model.")
+    
     self.add_name_value_input("caption",left=False,tooltip="Ingame prop caption that will appear when player looks at it.")
     self.add_name_value_input("prop data",left=False,tooltip="String data of the prop, can be used to store data for use in scripts.")
 
