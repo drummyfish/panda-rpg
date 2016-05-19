@@ -68,7 +68,7 @@ class ItemTab(Tab):
     line += 1
     self.add_button("new item",0,line,self.on_new_item_type_click)
     line += 1
-    self.add_button("delete item",0,line,self.on_delte_item_click)
+    self.add_button("delete item",0,line,self.on_delete_item_click)
    
     self.listbox = Listbox(self)
     self.listbox.grid(row=0,column=1,rowspan=line + 1)
@@ -90,10 +90,14 @@ class ItemTab(Tab):
     self.update_listbox()
 
   def on_listbox_change(self,event):
-    widget = event.widget
-    selection = widget.curselection()
-    self.selected_id = widget.get(selection[0])
-    self.update_item_info()
+    try:
+      widget = event.widget
+      selection = widget.curselection()
+      self.selected_id = widget.get(selection[0])
+      self.update_item_info()
+    except Exception:
+      # list clicked but no items => index exception
+      return
 
   def on_edit_item_click(self):
     if self.selected_id != None:
@@ -113,7 +117,7 @@ class ItemTab(Tab):
       self.update_item_info()
       self.update_listbox()
     
-  def on_delte_item_click(self):
+  def on_delete_item_click(self):
     if self.selected_id != None:
       self.database.get_item_types().pop(self.selected_id,None)
       self.selected_id = None

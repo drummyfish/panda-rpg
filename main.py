@@ -96,7 +96,7 @@ class Game(ShowBase, DirectObject.DirectObject):
       self.accept(key,self.handle_input,[key,True])
       self.accept(key + "-up",self.handle_input,[key,False])
 
-    self.level = Level.load_from_file("test_exterior.txt")         ##< contains the level data
+    self.level = Level.load_from_file("test_exterior2.txt")         ##< contains the level data
     self.collision_mask = self.level.get_collision_mask()
     self.setup_environment_scene(self.level)
     
@@ -135,6 +135,14 @@ class Game(ShowBase, DirectObject.DirectObject):
       self.update_daytime_counter = Game.DAYTIME_UPDATE_COUNTER
       self.set_daytime(self.daytime)
       return task.cont
+  
+  ## Returns AnimatedTextureModel object with placeholder model, for
+  #  testing purposes.
+  
+  def make_placeholder_model(self):
+    result = AnimatedTextureModel()
+    result.model_name = "placeholder.obj"
+    return result
   
   ## Computes a new position of object in movement, respecting the
   #  collisions with level geometry.
@@ -523,6 +531,21 @@ class Game(ShowBase, DirectObject.DirectObject):
     self.level_node_path.setTransparency(TransparencyAttrib.MBinary,1)
     self.level_node_path.set_bin("opaque",1)
     
+    # add items to the scene:
+    
+    item_counter = 0
+    
+    for item in level.get_items():
+      item_node_path = self.level_node_path.attachNewNode(make_node(self.make_placeholder_model()))
+      name = "i" + str(item_counter)              # 'i' for item
+      item_node_path.getNodes()[0].setName(name)
+      item.node_path = item_node_path
+      
+      item_counter += 1
+      
+      item_node_path.setPos(item.position[1] - 0.5,item.position[0] - 0.5,0)
+      item_node_path.setHpr(90,90,item.orientation)
+    
     # setup the skybox (if there are any textures, otherwise don't create it at all)
     
     if len(skybox_texture_names) > 0:
@@ -615,8 +638,6 @@ class Game(ShowBase, DirectObject.DirectObject):
         self.run_scripts(prop.scripts_load,event_type="load",caller=prop)
       except Exception:
         pass
-        
-    self.render.ls()         # DELETE THIS LATER
         
   ## Runs given game script in the current context.
   #  @param filename name of the script (including extension but without the resource path)
