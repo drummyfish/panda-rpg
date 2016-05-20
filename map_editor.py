@@ -1,64 +1,5 @@
-from Tkinter import *
-from ttk import Frame, Button, Label, Style
-import tkFileDialog
 import math
-from general import *
-from level import *
-
-## Serves as an input for AnimatedTextureModel info.
-class AnimatedTextureModelInput(Frame):
-  def __init__(self, parent, *args, **kw):
-    Frame.__init__(self, parent, relief=GROOVE, borderwidth=2)
-    
-    self.label_model = Label(self,text="model name")
-    self.input_model = Text(self,height=1,width=30)
-    self.tooltip_model = TooltipDecorator(self.input_model,"Model filename.")
-    
-    self.label_textures = Label(self,text="texture names")
-    self.input_textures = Text(self,height=1,width=30)
-    self.tooltip_textures = TooltipDecorator(self.input_textures,"Semicolon separated texture filenames.\nThe textures will be cycled through with specified framerate.")
-    
-    self.label_framerate = Label(self,text="texture framerate")
-    self.input_framerate = Text(self,height=1,width=30)
-    self.tooltip_framerate = TooltipDecorator(self.input_framerate,"How fast the textures will be changed.")
-    
-    self.label_model.pack()
-    self.input_model.pack()
-    self.label_textures.pack()
-    self.input_textures.pack()
-    self.label_framerate.pack()
-    self.input_framerate.pack()
-    
-  def clear(self):
-    self.input_model.delete("1.0",END)
-    self.input_textures.delete("1.0",END)
-    self.input_framerate.delete("1.0",END)
-    
-  ## Returns list of texture names.
-  def get_textures(self):
-    text = self.input_textures.get("1.0",END).replace("\n","")
-    return text.split(";")
-    
-  def get_model(self):
-    text = self.input_model.get("1.0",END).replace("\n","")
-    return text
-  
-  def get_framerate(self):
-    text = self.input_framerate.get("1.0",END).replace("\n","")
-    return float(text)
-  
-  ## Fills the widget with info from given model.
-  def set_model(self,animated_texture_model):
-    self.clear()
-    self.input_model.insert("1.0",animated_texture_model.model_name)
-    self.input_textures.insert("1.0",MapEditor.list_to_string(animated_texture_model.texture_names))
-    self.input_framerate.insert("1.0",animated_texture_model.framerate)
-
-  ## Sets the properties of given model by values in the widget.
-  def fill_model(self,animated_texture_model):
-    animated_texture_model.model_name = self.get_model()
-    animated_texture_model.texture_names = self.get_textures()
-    animated_texture_model.framerate = self.get_framerate()
+from general_gui import *
 
 ## Frame that can be scrolled.
 class ScrolledFrame(Frame):
@@ -99,43 +40,6 @@ class ScrolledFrame(Frame):
       return
 
     canvas.bind('<Configure>',_configure_canvas)
-
-## Decorator for widget tooltips.
-class TooltipDecorator(object):
-  def __init__(self, widget, text='widget info'):
-    self.widget = widget
-    self.text = text
-    self.widget.bind("<Enter>",self.enter)
-    self.widget.bind("<Leave>",self.close)
-    self.top_window = None
-
-  def enter(self, event=None):
-    bouding_box = self.widget.bbox("insert")
-    
-    if bouding_box == None:
-      return
-    
-    x = bouding_box[0]
-    y = bouding_box[1]
-    cx = bouding_box[2]
-    cy = bouding_box[3]
-    
-    x += self.widget.winfo_rootx() + 25
-    y += self.widget.winfo_rooty() + 20
-    
-    self.top_window = Toplevel(self.widget)
-    
-    # Leaves only the label and removes the app window
-    self.top_window.wm_overrideredirect(True)
-    self.top_window.wm_geometry("+%d+%d" % (x, y))
-    label = Label(self.top_window, text=self.text, justify='left',
-                       background="white", relief='solid', borderwidth=1,
-                       font=("times", "12", "normal"))
-    label.pack(ipadx=1)
-
-  def close(self, event=None):
-    if self.top_window:
-      self.top_window.destroy()
 
 class MapEditor(ScrolledFrame):
   TILE_SIZE = 20
@@ -182,7 +86,7 @@ class MapEditor(ScrolledFrame):
    
   def on_set_map_info_click(self):
     self.level.set_name(self.get_text("name"))
-    self.level.set_skybox_textures(MapEditor.string_to_list(self.get_text("skybox textures")))
+    self.level.set_skybox_textures(string_to_list(self.get_text("skybox textures")))
     diffuse_lights = self.get_text("daytime colors").replace(" ", "").split(";")
    
     for i in range(len(diffuse_lights)):
@@ -222,7 +126,7 @@ class MapEditor(ScrolledFrame):
     self.selected_item.orientation = float(self.get_text("item orientation"))
     self.selected_item.data = self.get_text("item data")
     self.selected_item.db_id = self.get_text("item DB ID")
-    self.selected_item.scripts_pickup = MapEditor.string_to_list(self.get_text("scripts - pick up"))
+    self.selected_item.scripts_pickup = string_to_list(self.get_text("scripts - pick up"))
 
     self.redraw_level()
     self.update_gui_info()
@@ -230,24 +134,34 @@ class MapEditor(ScrolledFrame):
     
   def on_delete_prop_item_click(self):
     props = self.level.get_props()
+    items = self.level.get_items()
     
     for i in range(len(props)):
       if props[i] == self.selected_prop:
         del props[i]
         break
       
+    for i in range(len(items)):
+      if items[i] == self.selected_item:
+        del items[i]
+        break
+      
     self.selected_prop = None
+    self.selected_item = None
     self.redraw_level()
     self.update_gui_info()
 
   def on_duplicate_prop_item_click(self):
-    if self.selected_prop == None:
-      return
-    
-    new_prop = self.selected_prop.copy()
-    new_prop.position = (1.0,1.0)
-    self.level.add_prop(new_prop)
-    self.redraw_level()
+    if self.selected_prop != None:
+      new_prop = self.selected_prop.copy()
+      new_prop.position = (1.0,1.0)
+      self.level.add_prop(new_prop)
+      self.redraw_level()
+    elif self.selected_item != None:
+      new_item = self.selected_item.copy()
+      new_item.position = (1.0,1.0)
+      self.level.add_item(new_item)
+      self.redraw_level()
     
   def set_prop_properties(self):
     if self.selected_prop == None:
@@ -259,9 +173,9 @@ class MapEditor(ScrolledFrame):
     self.selected_prop.orientation = float(self.get_text("prop orientation"))
     self.selected_prop.caption = self.get_text("caption")
     self.selected_prop.data = self.get_text("prop data")
-    self.selected_prop.scripts_load = MapEditor.string_to_list(self.get_text("scripts - load"))
-    self.selected_prop.scripts_use = MapEditor.string_to_list(self.get_text("scripts - use"))
-    self.selected_prop.scripts_examine = MapEditor.string_to_list(self.get_text("scripts - examine"))
+    self.selected_prop.scripts_load = string_to_list(self.get_text("scripts - load"))
+    self.selected_prop.scripts_use = string_to_list(self.get_text("scripts - use"))
+    self.selected_prop.scripts_examine = string_to_list(self.get_text("scripts - examine"))
     
     self.redraw_level()
     self.update_gui_info()
@@ -363,26 +277,6 @@ class MapEditor(ScrolledFrame):
   def get_check(self, name):
     return self.checkbox_widgets[name].value.get() == True
     
-  @staticmethod
-  def list_to_string(input_list):
-    result = ""
-    
-    first = True
-    
-    for item in input_list:
-      if first:
-        first = False
-      else:
-        result += ";"
-      
-      result += str(item)
-    
-    return result
-    
-  @staticmethod
-  def string_to_list(input_string):
-    return [] if len(input_string.strip()) == 0 else input_string.split(";")
-    
   ## Updates the info in GUI, i.e. selected tile information etc.
     
   def update_gui_info(self):
@@ -390,8 +284,8 @@ class MapEditor(ScrolledFrame):
     self.set_text("height",str(self.level.get_height()))
     self.set_text("name",self.level.get_name())
     self.set_text("ambient light amount",str(self.level.get_ambient_light_amount()))
-    self.set_text("skybox textures",MapEditor.list_to_string(self.level.get_skybox_textures()))
-    self.set_text("daytime colors",MapEditor.list_to_string(self.level.get_diffuse_lights()).replace(" ",""))
+    self.set_text("skybox textures",list_to_string(self.level.get_skybox_textures()))
+    self.set_text("daytime colors",list_to_string(self.level.get_diffuse_lights()).replace(" ",""))
     self.set_text("fog color",self.color_to_string(self.level.get_fog_color()))
     self.set_text("fog distance",float(self.level.get_fog_distance()))
     
@@ -422,16 +316,16 @@ class MapEditor(ScrolledFrame):
       self.set_text("prop position",str(self.selected_prop.position[0]) + ";" + str(self.selected_prop.position[1]))
       self.set_text("prop orientation",str(self.selected_prop.orientation))
 #      self.set_text("prop model",self.selected_prop.model.model_name)
-#      self.set_text("prop textures",MapEditor.list_to_string(self.selected_prop.model.texture_names))
+#      self.set_text("prop textures",list_to_string(self.selected_prop.model.texture_names))
 #      self.set_text("prop framerate",str(self.selected_prop.model.framerate))
 
       self.model_widgets["prop model"].set_model(self.selected_prop.model)
 
       self.set_text("caption",str(self.selected_prop.caption))
       self.set_text("prop data",str(self.selected_prop.data))
-      self.set_text("scripts - load",MapEditor.list_to_string(self.selected_prop.scripts_load))
-      self.set_text("scripts - use",MapEditor.list_to_string(self.selected_prop.scripts_use))
-      self.set_text("scripts - examine",MapEditor.list_to_string(self.selected_prop.scripts_examine))
+      self.set_text("scripts - load",list_to_string(self.selected_prop.scripts_load))
+      self.set_text("scripts - use",list_to_string(self.selected_prop.scripts_use))
+      self.set_text("scripts - examine",list_to_string(self.selected_prop.scripts_examine))
     else:
       self.set_text("prop position","")
       self.set_text("prop orientation","")
@@ -451,7 +345,7 @@ class MapEditor(ScrolledFrame):
       self.set_text("item position",str(self.selected_item.position[0]) + ";" + str(self.selected_item.position[1]))
       self.set_text("item orientation",str(self.selected_item.orientation))
       self.set_text("item DB ID",str(self.selected_item.db_id))  
-      self.set_text("scripts - pick up",MapEditor.list_to_string(self.selected_item.scripts_pickup))
+      self.set_text("scripts - pick up",list_to_string(self.selected_item.scripts_pickup))
       self.set_text("item data",self.selected_item.data)
     else:
       self.set_text("item position","")
@@ -602,7 +496,7 @@ class MapEditor(ScrolledFrame):
     column = 0 if left else 3
     row = self.current_row_left if left else self.current_row_right
     
-    self.add_widget(Label(self.interior,text="----------------------"),row,column,1,2,True)
+    self.add_widget(Label(self.interior,text="----------------------\n"),row,column,1,2,True)
     
     if left:
       self.current_row_left += 1
@@ -637,12 +531,12 @@ class MapEditor(ScrolledFrame):
     self.add_widget(self.label_widgets[name],row,column,tooltip=tooltip)
    
     self.model_widgets[name] = AnimatedTextureModelInput(self.interior)
-    self.add_widget(self.model_widgets[name],row,column + 1)
+    self.add_widget(self.model_widgets[name],row,column + 1,row_span=6)
     
     if left:
-      self.current_row_left += 1
+      self.current_row_left += 6
     else:
-      self.current_row_right += 1
+      self.current_row_right += 6
       
   def add_button(self, name, command=None, left=True, tooltip=""):
     column = 0 if left else 3
@@ -707,22 +601,16 @@ class MapEditor(ScrolledFrame):
     self.add_name_value_input("scripts - use",left=False,tooltip="Filename of a script that will be run when the prop is used.")
     self.add_name_value_input("scripts - examine",left=False,tooltip="Filename of a script that will be run when the prop is looked at.")
     
-    self.add_separator(left=False)
-    
     self.add_button("new item",self.on_new_item_click,left=False,tooltip="Creates a new item.")
     self.add_name_value_input("item position",left=False,tooltip="Item position in tiles (doesn't have to be integer).")
     self.add_name_value_input("item orientation",left=False,tooltip="Item rotation in degrees CCW.")
     self.add_name_value_input("item DB ID",left=False,tooltip="Database ID of the concrete item this item will represent.")
     self.add_name_value_input("scripts - pick up",left=False,tooltip="Filename of a script that will be run when the item is picked up.")
     self.add_name_value_input("item data",left=False,tooltip="String data of the item, can be used to store data for use in scripts.")
-    
-    self.add_separator(left=False)
 
     self.add_button("set prop/item properties",left=False,command=self.on_set_prop_item_properties_click,tooltip="Sets the data entered above for currently selected item or prop.")
     self.add_button("duplicate prop/item",left=False,command=self.on_duplicate_prop_item_click,tooltip="Duplicates currently selected prop or item.")
     self.add_button("delete prop/item",left=False,command=self.on_delete_prop_item_click,tooltip="Deletes currently selected prop or item.")
-    
-    self.add_separator(left=False)
     
     self.add_name_check_input("stick to grid",True,self.redraw_level,left=False,tooltip="If checked, props and items will stick to a grid when moved.")
     self.add_name_check_input("display texture",True,self.redraw_level,left=False,tooltip="If checked, texture names will affect the color of the objects in editor.")
