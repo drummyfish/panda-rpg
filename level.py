@@ -88,7 +88,8 @@ class Level:
   @staticmethod
   def load_from_file(filename):
     input_file = open(filename,"r")
-    result = pickle.load(input_file)
+    level = Level(1,1)
+    result = unpickle_backwards_compatible(level,input_file)
     input_file.close()
     return result
   

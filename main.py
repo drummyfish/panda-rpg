@@ -96,7 +96,7 @@ class Game(ShowBase, DirectObject.DirectObject):
       self.accept(key,self.handle_input,[key,True])
       self.accept(key + "-up",self.handle_input,[key,False])
 
-    self.level = Level.load_from_file("test_exterior2.txt")         ##< contains the level data
+    self.level = Level.load_from_file("test_exterior.txt")         ##< contains the level data
     self.collision_mask = self.level.get_collision_mask()
     self.setup_environment_scene(self.level)
     
