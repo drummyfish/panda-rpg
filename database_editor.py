@@ -5,6 +5,7 @@ import math
 from general import *
 from game_database import *
 from level import *
+from general_gui import *
 
 class Tab(Frame):
   def __init__(self, parent, database):
@@ -13,6 +14,7 @@ class Tab(Frame):
     self.database = database
     self.button_widgets = {}
     self.text_widgets = {}
+    self.model_widgets = {}
 
   def add_button(self,name,grid_x,grid_y,command=None):
     self.button_widgets[name] = Button(self,text=name,command=command)
@@ -21,6 +23,10 @@ class Tab(Frame):
   def add_text_input(self,name,grid_x,grid_y):
     self.text_widgets[name] = Text(self, height=1, width=30)
     self.text_widgets[name].grid(row=grid_y,column=grid_x,sticky=N + S + W + E)
+
+  def add_model_input(self,name,grid_x,grid_y):
+    self.model_widgets[name] = AnimatedTextureModelInput(self)
+    self.model_widgets[name].grid(row=grid_y,column=grid_x,sticky=N + S + W + E)
 
   def add_label(self,name,grid_x,grid_y):
     label = Label(self, text=name)
@@ -37,9 +43,8 @@ class ItemTab(Tab):
   def __init__(self, parent, database):
     Tab.__init__(self, parent, database)
     
-    self.selected_id = None          # string id or None
-    
-    self.init_ui() 
+    self.selected_id = None          # non negative integer id or None
+    self.init_ui()
     self.update_listbox()
     self.update_item_info()
 
@@ -56,13 +61,9 @@ class ItemTab(Tab):
     line += 1
     self.add_text_input("name",0,line)
     line += 1
-    self.add_label("model name",0,line)
+    self.add_label("model",0,line)
     line += 1
-    self.add_text_input("model",0,line)
-    line += 1
-    self.add_label("texture name",0,line)
-    line += 1
-    self.add_text_input("texture",0,line)
+    self.add_model_input("item model",0,line)
     line += 1
     self.add_button("edit item",0,line,self.on_edit_item_click)
     line += 1
@@ -77,16 +78,7 @@ class ItemTab(Tab):
     self.pack(fill=BOTH, expand=1)
 
   def on_new_item_type_click(self):
-    new_item_type = ItemType()
-    
-    new_id = self.get_text_value("id")
-    new_item_type.name = self.get_text_value("name")
-    
-    if not new_id in self.database.get_item_types():
-      self.database.get_item_types()[new_id] = new_item_type
-    else:
-      print("id already exists")
-    
+    self.database.new_item_type()
     self.update_listbox()
 
   def on_listbox_change(self,event):
@@ -106,8 +98,6 @@ class ItemTab(Tab):
       new_id = self.get_text_value("id")
       
       selected_item.name = self.get_text_value("name")
-      selected_item.model_name = self.get_text_value("model")
-      selected_item.texture_name = self.get_text_value("texture")
       
       self.database.get_item_types().pop(self.selected_id,None)
       self.database.get_item_types()[new_id] = selected_item
@@ -142,13 +132,9 @@ class ItemTab(Tab):
       
       self.set_text_value("id",self.selected_id)
       self.set_text_value("name",selected_item.name)
-      self.set_text_value("model",selected_item.model_name)
-      self.set_text_value("texture",selected_item.texture_name)
     else:
       self.set_text_value("id","")
       self.set_text_value("name","")
-      self.set_text_value("model","")
-      self.set_text_value("texture","")
 
 class NPCTab(Tab):
   def __init__(self, parent, database):
@@ -171,9 +157,28 @@ class MainTab(Tab):
     self.init_ui()  
 
   def init_ui(self):
-    self.add_button("load database",0,0)
-    self.add_button("save database",0,1)
+    self.add_button("load database",0,0,self.on_load_click)
+    self.add_button("save database",0,1,self.on_save_click)
     self.pack(fill=BOTH, expand=1)
+    
+  def on_save_click(self):
+    filename = tkFileDialog.asksaveasfilename()
+    
+    if len(filename) == 0:
+      return
+    
+    GameDatabase.save_to_file(self.database,filename)    
+  
+  def on_load_click(self):
+    filename = tkFileDialog.askopenfilename()
+    
+    if len(filename) == 0:
+      return
+    
+    self.database = GameDatabase.load_from_file(filename)
+    
+    self.parent.tab_items.database = self.database
+    self.parent.tab_items.update_listbox()
     
 def main():
   root = Tk()
@@ -182,13 +187,13 @@ def main():
   
   database = GameDatabase()
   
-  tab_main = MainTab(notebook,database)
-  tab_items = ItemTab(notebook,database)
-  tab_npcs = NPCTab(notebook,database)
+  notebook.tab_main = MainTab(notebook,database)
+  notebook.tab_items = ItemTab(notebook,database)
+  notebook.tab_npcs = NPCTab(notebook,database)
   
-  notebook.add(tab_main,text='Main')
-  notebook.add(tab_items,text='Items')
-  notebook.add(tab_npcs,text='NPCs')
+  notebook.add(notebook.tab_main,text='Main')
+  notebook.add(notebook.tab_items,text='Items')
+  notebook.add(notebook.tab_npcs,text='NPCs')
   
   notebook.pack()
   
