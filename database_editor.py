@@ -78,14 +78,19 @@ class ItemTab(Tab):
     self.pack(fill=BOTH, expand=1)
 
   def on_new_item_type_click(self):
-    self.database.new_item_type()
+    self.selected_id = self.database.new_item_type()
     self.update_listbox()
 
   def on_listbox_change(self,event):
     try:
       widget = event.widget
       selection = widget.curselection()
-      self.selected_id = widget.get(selection[0])
+  
+      selected_item_text = widget.get(selection[0])
+      helper = selected_item_text.split(" ")
+
+      self.selected_id = int(helper[0])
+      
       self.update_item_info()
     except Exception:
       # list clicked but no items => index exception
@@ -95,14 +100,11 @@ class ItemTab(Tab):
     if self.selected_id != None:
       selected_item = self.database.get_item_types()[self.selected_id]
       
-      new_id = self.get_text_value("id")
-      
       selected_item.name = self.get_text_value("name")
+      self.model_widgets["item model"].fill_model(selected_item.model)
       
       self.database.get_item_types().pop(self.selected_id,None)
-      self.database.get_item_types()[new_id] = selected_item
-      
-      self.selected_id = new_id
+      self.database.get_item_types()[self.selected_id] = selected_item
       
       self.update_item_info()
       self.update_listbox()
@@ -123,7 +125,7 @@ class ItemTab(Tab):
     i = 0
     
     for item_id in items:
-      self.listbox.insert(i,item_id)
+      self.listbox.insert(i,str(item_id) + " " + self.database.item_types[item_id].name)
       i += 1
       
   def update_item_info(self):
@@ -132,9 +134,11 @@ class ItemTab(Tab):
       
       self.set_text_value("id",self.selected_id)
       self.set_text_value("name",selected_item.name)
+      self.model_widgets["item model"].set_model(selected_item.model)
     else:
       self.set_text_value("id","")
       self.set_text_value("name","")
+      self.model_widgets["item model"].clear()
 
 class NPCTab(Tab):
   def __init__(self, parent, database):

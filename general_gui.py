@@ -76,7 +76,7 @@ class AnimatedTextureModelInput(Frame):
     
     self.label_framerate = Label(self,text="texture framerate")
     self.input_framerate = Text(self,height=1,width=30)
-    self.tooltip_framerate = TooltipDecorator(self.input_framerate,"How fast the textures will be changed.")
+    self.tooltip_framerate = TooltipDecorator(self.input_framerate,"How fast the textures will be changed.")  
     
     self.label_model.pack()
     self.input_model.pack()
@@ -101,7 +101,11 @@ class AnimatedTextureModelInput(Frame):
   
   def get_framerate(self):
     text = self.input_framerate.get("1.0",END).replace("\n","")
-    return float(text)
+    
+    try:
+      return float(text)
+    except Exception:
+      return 1.0
   
   ## Fills the widget with info from given model.
   def set_model(self,animated_texture_model):

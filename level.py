@@ -2,17 +2,6 @@ from general import *
 import pickle
 import copy
 
-## Represents a model that has either static or animated frame animated texture.
-
-class AnimatedTextureModel:
-  def __init__(self):
-    self.model_name = ""
-    self.texture_names = []
-    self.framerate = 1.0
-
-  def copy(self):
-    return copy.deepcopy(self)
-
 ## Represents one level tile.
 
 class LevelTile:
