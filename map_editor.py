@@ -80,6 +80,7 @@ class MapEditor(ScrolledFrame):
     self.level = Level.load_from_file(filename)
     self.selected_tile = None
     self.redraw_level()
+    self.update_gui_info()
    
   def on_is_wall_click(self):
     self.set_check("is steppable", not self.get_check("is wall"))
@@ -87,6 +88,7 @@ class MapEditor(ScrolledFrame):
   def on_set_map_info_click(self):
     self.level.set_name(self.get_text("name"))
     self.level.set_skybox_textures(string_to_list(self.get_text("skybox textures")))
+    self.level.set_database_name(self.get_text("database"))
     diffuse_lights = self.get_text("daytime colors").replace(" ", "").split(";")
    
     for i in range(len(diffuse_lights)):
@@ -288,6 +290,7 @@ class MapEditor(ScrolledFrame):
     self.set_text("daytime colors",list_to_string(self.level.get_diffuse_lights()).replace(" ",""))
     self.set_text("fog color",self.color_to_string(self.level.get_fog_color()))
     self.set_text("fog distance",float(self.level.get_fog_distance()))
+    self.set_text("database",self.level.get_database_name())
     
     if self.selected_tile != None:
       tile = self.level.get_tile(self.selected_tile[0],self.selected_tile[1])
@@ -574,7 +577,8 @@ class MapEditor(ScrolledFrame):
     self.add_name_value_input("fog color",tooltip="Color in format (R,G,B) where each component is number 0 - 1.")
     self.add_name_value_input("fog distance",tooltip="How far the fog will be.")
     self.add_name_value_input("width",tooltip="Map width in squares.")
-    self.add_name_value_input("height",tooltip="Map height in squares.")
+    self.add_name_value_input("height",tooltip="Map height in squares.") 
+    self.add_name_value_input("database",tooltip="Name of the database file for the map.")
     self.add_button("set map info",self.on_set_map_info_click,tooltip="Applies the above entered map info.")
     self.add_name_value_input("tile coordinates",tooltip="Selected tile coordinates, read only.")
 

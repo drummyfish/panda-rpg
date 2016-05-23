@@ -13,6 +13,7 @@ from direct.interval.LerpInterval import LerpPosInterval
 
 from general import *
 from level import *
+from game_database import *
 
 class Game(ShowBase, DirectObject.DirectObject):
   DAYTIME_UPDATE_COUNTER = 32
@@ -59,7 +60,8 @@ class Game(ShowBase, DirectObject.DirectObject):
     self.use_pressed = False                                        ##< whether the use key way pressed
 
     self.node_object_mapping = {}                                   ##< contains mapping of some node names to their corresponding objects
-    self.focused_prop = None                                        ##< references a LevelProp item that the player is currently looking at
+    self.focused_prop = None                                        ##< references a LevelProp that the player is currently looking at
+    self.focused_item = None                                        ##< references a LevelItem that the player is currently looking at
 
     base.setFrameRateMeter(True)
 
@@ -97,6 +99,9 @@ class Game(ShowBase, DirectObject.DirectObject):
       self.accept(key + "-up",self.handle_input,[key,False])
 
     self.level = Level.load_from_file("test_exterior.txt")         ##< contains the level data
+    
+    self.database = GameDatabase.load_from_file(RESOURCE_PATH + "/" + self.level.get_database_name())
+    
     self.collision_mask = self.level.get_collision_mask()
     self.setup_environment_scene(self.level)
     
@@ -304,6 +309,7 @@ class Game(ShowBase, DirectObject.DirectObject):
  
     self.collission_traverser.traverse(self.level_node_path)
     self.focused_prop = None
+    self.focused_item = None
     
     caption = ""
     
@@ -320,8 +326,14 @@ class Game(ShowBase, DirectObject.DirectObject):
       
       try:
         picked_name = picked_node.getName()
-        self.focused_prop = self.node_object_mapping[picked_name]
-        caption = self.focused_prop.caption
+        
+        if picked_name[0] == "p":    # prop
+          self.focused_prop = self.node_object_mapping[picked_name]
+          caption = self.focused_prop.caption
+        elif picked_name[0] == "i":  # item
+          self.focused_item = self.node_object_mapping[picked_name]
+          caption = self.database.get_item_types()[self.focused_item.db_id].name
+          
       except Exception:
         pass
       
@@ -538,6 +550,7 @@ class Game(ShowBase, DirectObject.DirectObject):
     for item in level.get_items():
       item_node_path = self.level_node_path.attachNewNode(make_node(self.make_placeholder_model()))
       name = "i" + str(item_counter)              # 'i' for item
+      self.node_object_mapping[name] = item
       item_node_path.getNodes()[0].setName(name)
       item.node_path = item_node_path
       

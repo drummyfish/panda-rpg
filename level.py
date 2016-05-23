@@ -108,6 +108,7 @@ class Level:
     self.props = []
     self.items = []
     self.name = ""                         ##< level name
+    self.database_name = ""                ## name of the database file
 
     for i in range(len(self.layout)):
       for j in range(len(self.layout[0])):
@@ -115,6 +116,12 @@ class Level:
           self.layout[i][j] = LevelTile()
         else:
           self.layout[i][j] = LevelTile(default_tile)
+
+  def get_database_name(self):
+    return self.database_name
+  
+  def set_database_name(self, new_name):
+    self.database_name = new_name
 
   ## Resizes the map.
 
