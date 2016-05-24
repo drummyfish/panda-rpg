@@ -548,7 +548,7 @@ class Game(ShowBase, DirectObject.DirectObject):
     item_counter = 0
     
     for item in level.get_items():
-      item_node_path = self.level_node_path.attachNewNode(make_node(self.make_placeholder_model()))
+      item_node_path = self.level_node_path.attachNewNode(make_node(self.database.get_item_types()[item.db_id].model))
       name = "i" + str(item_counter)              # 'i' for item
       self.node_object_mapping[name] = item
       item_node_path.getNodes()[0].setName(name)
