@@ -408,6 +408,7 @@ class Game(ShowBase, DirectObject.DirectObject):
   def setup_environment_scene(self, level):
     models = {}      # model cache
     textures = {}    # texture cache
+    self.overlay_texture_stage = TextureStage("ts")
     
     def load_model(model_name):                # loads model into 'models' cache (only if it hasn't been loaded laready)
       if not model_name in models:
@@ -416,9 +417,11 @@ class Game(ShowBase, DirectObject.DirectObject):
     def load_texture(texture_name):            # loads texture into 'textures' cache (only if it hasn't been loaded laready)
       if not texture_name in textures:
         textures[texture_name] = self.loader.loadTexture(RESOURCE_PATH + texture_name)
-        textures[texture_name].setMinfilter(Texture.FTLinearMipmapLinear)
-
-    def make_node(animated_texture_model, name="node"):     # makes a node out of AnimatedTextureModel object, handles loading models and textures and caches
+        textures[texture_name].setMinfilter(Texture.FTLinearMipmapLinear)  
+        textures[texture_name].setWrapU(Texture.WM_clamp)
+        textures[texture_name].setWrapV(Texture.WM_clamp)
+        
+    def make_node(animated_texture_model,name="node"):     # makes a node out of AnimatedTextureModel object, handles loading models and textures and caches
       load_model(animated_texture_model.model_name)
       
       model = models[animated_texture_model.model_name]
@@ -459,6 +462,27 @@ class Game(ShowBase, DirectObject.DirectObject):
         sequence_node.loop(True)
       
         return sequence_node
+
+    def add_overlay_texture(node_path,texture_name):
+      load_texture(texture_name)
+      
+      new_texture = textures[texture_name]
+      node_path.setTexture(self.overlay_texture_stage,new_texture)
+
+    def tile_is_shadowed(x,y):
+      if y > 0 and not level.get_tile(x,y - 1).is_empty() and level.get_tile(x,y - 1).wall:
+        return True
+      
+      if x < level.get_width() - 1 and not level.get_tile(x + 1,y).is_empty() and level.get_tile(x + 1,y).wall:
+        return True
+      
+      if y < level.get_height() - 1 and not level.get_tile(x,y + 1).is_empty() and level.get_tile(x,y + 1).wall:
+        return True
+      
+      if x > 0 and not level.get_tile(x - 1,y).is_empty() and level.get_tile(x - 1,y).wall:
+        return True
+      
+      return False
      
     cull_bin_manager = CullBinManager.getGlobalPtr()
     cull_bin_manager.setBinType(name="opaque",type=cull_bin_manager.BT_state_sorted)
@@ -483,6 +507,7 @@ class Game(ShowBase, DirectObject.DirectObject):
     level_subnodes = [[self.level_node_path.attachNewNode(PandaNode("sublevel " + str(x) + " " + str(y))) for x in range(int(ceil(level.get_width() / float(subdivision))))] for y in range(int(ceil(level.get_height() / float(subdivision))))]
     
     # make the level:
+
     
     for j in range(level.get_height()):
       for i in range(level.get_width()):
@@ -495,6 +520,12 @@ class Game(ShowBase, DirectObject.DirectObject):
             tile_node_path = node_parent.attachNewNode(make_node(level.get_tile(i,j).floor_model,"tile " + coordinate_string))
             tile_node_path.setPos(j,i,0)
             tile_node_path.setHpr(90,90,level.get_tile(i,j).floor_orientation * 90)
+            
+            # add wall shadows to the tile:
+            
+            if tile_is_shadowed(i,j):
+              add_overlay_texture(tile_node_path,"tile_shadow.png")
+            
           else:             # wall
             offsets = [[0,0.5], [0.5,0], [-0.5,0], [0,-0.5]] # down, right, left, up
             rotations = [-90, 0, 180, 90]
@@ -651,7 +682,7 @@ class Game(ShowBase, DirectObject.DirectObject):
         self.run_scripts(prop.scripts_load,event_type="load",caller=prop)
       except Exception:
         pass
-        
+     
   ## Runs given game script in the current context.
   #  @param filename name of the script (including extension but without the resource path)
   #  @param caller object that caused the script to be run
