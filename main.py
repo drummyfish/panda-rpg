@@ -10,6 +10,8 @@ from pandac.PandaModules import ClockObject
 from panda3d.core import ConfigVariableBool, CullBinManager
 from direct.gui.OnscreenText import OnscreenText
 from direct.interval.LerpInterval import LerpPosInterval
+from direct.gui.DirectGui import *
+from direct.gui.OnscreenImage import OnscreenImage
 
 from general import *
 from level import *
@@ -36,12 +38,14 @@ class Game(ShowBase, DirectObject.DirectObject):
     if Game.PROFILING:
       PStatClient.connect()              # <---- uncomment for profiling
 
-    props = WindowProperties() 
-    props.setSize(1024,768) 
-    props.setCursorHidden(True) 
-    props.setMouseMode(WindowProperties.M_relative)
+    self.resolution = (1024,768)
 
-    base.win.requestProperties(props)
+    self.props = WindowProperties() 
+    self.props.setSize(self.resolution[0],self.resolution[1]) 
+    self.props.setCursorHidden(True) 
+    self.props.setMouseMode(WindowProperties.M_relative)
+
+    base.win.requestProperties(self.props)
     
     FPS = 60
     globalClock = ClockObject.getGlobalClock()
@@ -69,6 +73,8 @@ class Game(ShowBase, DirectObject.DirectObject):
 
     self.filters = CommonFilters(base.win,base.cam)   
     self.filters.setBloom(size="small",desat=1)
+    
+    self.gui_active = False                                         ##< Says if the player has a GUI windows open, if True, movement will be disabled and mouse will be shown
 
     # initialise input handling:
 
@@ -93,7 +99,7 @@ class Game(ShowBase, DirectObject.DirectObject):
     base.mouseWatcherNode.set_modifier_buttons(ModifierButtons())
     base.buttonThrowers[0].node().set_modifier_buttons(ModifierButtons())
 
-    for key in ["w","s","a","d","W","S","A","D","q","e","shift","space","mouse1","mouse3"]:
+    for key in ["w","s","a","d","W","S","A","D","q","e","i","shift","space","mouse1","mouse3"]:
       self.input_state[key] = False
       self.accept(key,self.handle_input,[key,True])
       self.accept(key + "-up",self.handle_input,[key,False])
@@ -104,6 +110,7 @@ class Game(ShowBase, DirectObject.DirectObject):
     
     self.collision_mask = self.level.get_collision_mask()
     self.setup_environment_scene(self.level)
+    self.setup_gui()
     
   def reenable_usage_task(self, prop, task):
     prop.disable_usage = False
@@ -111,7 +118,23 @@ class Game(ShowBase, DirectObject.DirectObject):
     
   def handle_input(self,input_name,input_value):
     self.input_state[input_name] = input_value
-
+    
+    if input_name == "i" and input_value:
+      if not self.gui_active:
+        self.open_inventory()
+      else:
+        self.close_inventory()
+      
+  def open_inventory(self):
+    self.frame_inventory.show()
+    self.image_cursor.show()
+    self.gui_active = True
+    
+  def close_inventory(self):
+    self.frame_inventory.hide()
+    self.image_cursor.hide()
+    self.gui_active = False
+    
   def mouse_position_task(self, task):
     if base.mouseWatcherNode.hasMouse():
       x = base.mouseWatcherNode.getMouseX()
@@ -234,6 +257,11 @@ class Game(ShowBase, DirectObject.DirectObject):
     return position
   
   def camera_task(self, task):
+    self.image_cursor.setPos((2 * float(self.input_state["mx"]) / self.resolution[0],0.1,float(2 * self.input_state["my"]) / self.resolution[1]))
+    
+    if self.gui_active:
+      return task.cont
+    
     current_position = self.camera.getPos()
    
     camera_forward = self.camera.getRelativeVector(self.render,VBase3(0,1,0))
@@ -403,6 +431,18 @@ class Game(ShowBase, DirectObject.DirectObject):
     ambient_color = (light_color[0] * self.ambient_light_amount, light_color[1] * self.ambient_light_amount, light_color[2] * self.ambient_light_amount)
     self.ambient_light_node.node().setColor(VBase4(ambient_color[0],ambient_color[1],ambient_color[2],1))
 
+  def setup_gui(self):
+    # TODO: change this to regulart cross later:
+    self.cross = OnscreenText(text="+",parent=base.a2dBackground,pos=(0,0), scale=0.08,fg=(1, 1, 1, 1),shadow=(0, 0, 0, .5))
+    self.description_text = OnscreenText(text="",parent=base.a2dBackground,pos=(0,-0.15), scale=0.08,fg=(1, 1, 1, 1),shadow=(0, 0, 0, .5))
+
+    self.frame_inventory = DirectScrolledFrame(frameSize=(-0.5, 0.5, -0.5, 0.5))
+    self.frame_inventory.hide()
+    
+    self.image_cursor = OnscreenImage(image = RESOURCE_PATH + "/cursor.png",scale=0.05)
+    self.image_cursor.setTransparency(TransparencyAttrib.MAlpha)
+    self.image_cursor.hide()
+
   ## Sets up the 3D scene (including camera, lights etc.) provided on provided level layout.
 
   def setup_environment_scene(self, level):
@@ -508,7 +548,6 @@ class Game(ShowBase, DirectObject.DirectObject):
     
     # make the level:
 
-    
     for j in range(level.get_height()):
       for i in range(level.get_width()):
         tile = level.get_tile(i,j)
@@ -668,12 +707,6 @@ class Game(ShowBase, DirectObject.DirectObject):
     self.picker_ray = CollisionRay()
     picker_node.addSolid(self.picker_ray)
     self.collission_traverser.addCollider(picker_node_path,self.collission_handler)
-    
-    # setup the GUI:
-    
-    # TODO: change this to regulart cross later:
-    self.cross = OnscreenText(text="+",parent=base.a2dBackground,pos=(0,0), scale=0.08,fg=(1, 1, 1, 1),shadow=(0, 0, 0, .5))
-    self.description_text = OnscreenText(text="",parent=base.a2dBackground,pos=(0,-0.15), scale=0.08,fg=(1, 1, 1, 1),shadow=(0, 0, 0, .5))
 
     # run the init scripts:
  
