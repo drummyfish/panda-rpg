@@ -15,20 +15,37 @@ class Tab(Frame):
     self.button_widgets = {}
     self.text_widgets = {}
     self.model_widgets = {}
+    self.next_row = 0
 
-  def add_button(self,name,grid_x,grid_y,command=None):
+  def add_button(self,name,grid_x=0,grid_y=None,command=None):
+    if grid_y == None:
+      grid_y = self.next_row
+      self.next_row += 1
+    
     self.button_widgets[name] = Button(self,text=name,command=command)
     self.button_widgets[name].grid(row=grid_y,column=grid_x,sticky=N + S + W + E)
 
-  def add_text_input(self,name,grid_x,grid_y):
+  def add_text_input(self,name,grid_x=0,grid_y=None):
+    if grid_y == None:
+      grid_y = self.next_row
+      self.next_row += 1
+    
     self.text_widgets[name] = Text(self, height=1, width=30)
     self.text_widgets[name].grid(row=grid_y,column=grid_x,sticky=N + S + W + E)
 
-  def add_model_input(self,name,grid_x,grid_y):
+  def add_model_input(self,name,grid_x=0,grid_y=None):
+    if grid_y == None:
+      grid_y = self.next_row
+      self.next_row += 1
+    
     self.model_widgets[name] = AnimatedTextureModelInput(self)
     self.model_widgets[name].grid(row=grid_y,column=grid_x,sticky=N + S + W + E)
 
-  def add_label(self,name,grid_x,grid_y):
+  def add_label(self,name,grid_x=0,grid_y=None):
+    if grid_y == None:
+      grid_y = self.next_row
+      self.next_row += 1
+    
     label = Label(self, text=name)
     label.grid(row=grid_y,column=grid_x,sticky=N + S + W + E)
 
@@ -39,9 +56,46 @@ class Tab(Frame):
     self.text_widgets[name].delete("1.0",END)
     self.text_widgets[name].insert("1.0",text)
 
-class ItemTab(Tab):
-  def __init__(self, parent, database):
+class TabWithIDList(Tab):
+  def __init__(self, parent, database): 
     Tab.__init__(self, parent, database)
+    self.helper_line = 0
+    self.selected_id = -1
+    
+  def create_list(self,on_change_command):
+    self.listbox = Listbox(self)
+    self.listbox.grid(row=0,column=1,rowspan=self.next_row)
+    self.listbox.bind('<<ListboxSelect>>',self.on_listbox_change)
+    self.list_update_command = on_change_command
+
+  def get_selected_item_id(self):
+    try:
+      selection = self.listbox.curselection()
+      selected_item_text = self.listbox.get(selection[0])
+      helper = selected_item_text.split(" ")
+
+      return int(helper[0])
+    except Exception as e:
+      # list clicked but no items => index exception
+      return -1  
+
+  def on_listbox_change(self,event):
+    self.selected_id = self.get_selected_item_id()
+      
+    if self.selected_id >= 0:
+      self.list_update_command()
+    
+  def clear_list(self):
+    self.listbox.delete(0,END)
+    self.helper_line = 0
+    
+  def add_item_to_list(self,int_id,string_description):
+    self.listbox.insert(self.helper_line,str(int_id) + " " + string_description)
+    self.helper_line += 1
+
+class ItemTab(TabWithIDList):
+  def __init__(self, parent, database):
+    TabWithIDList.__init__(self, parent, database)
     
     self.selected_id = None          # non negative integer id or None
     self.init_ui()
@@ -52,28 +106,17 @@ class ItemTab(Tab):
     self.style = Style()
     self.style.theme_use("default")
    
-    line = 0
-    self.add_label("id",0,line)
-    line += 1
-    self.add_text_input("id",0,line)
-    line += 1
-    self.add_label("name",0,line)
-    line += 1
-    self.add_text_input("name",0,line)
-    line += 1
-    self.add_label("model",0,line)
-    line += 1
-    self.add_model_input("item model",0,line)
-    line += 1
-    self.add_button("edit item",0,line,self.on_edit_item_click)
-    line += 1
-    self.add_button("new item",0,line,self.on_new_item_type_click)
-    line += 1
-    self.add_button("delete item",0,line,self.on_delete_item_click)
+    self.add_label("id")
+    self.add_text_input("id")
+    self.add_label("name")
+    self.add_text_input("name")
+    self.add_label("model")
+    self.add_model_input("item model")
+    self.add_button("edit item",command=self.on_edit_item_click)
+    self.add_button("new item",command=self.on_new_item_type_click)
+    self.add_button("delete item",command=self.on_delete_item_click)
    
-    self.listbox = Listbox(self)
-    self.listbox.grid(row=0,column=1,rowspan=line + 1)
-    self.listbox.bind('<<ListboxSelect>>',self.on_listbox_change)
+    self.create_list(self.on_list_change)
    
     self.pack(fill=BOTH, expand=1)
 
@@ -81,20 +124,8 @@ class ItemTab(Tab):
     self.selected_id = self.database.new_item_type()
     self.update_listbox()
 
-  def on_listbox_change(self,event):
-    try:
-      widget = event.widget
-      selection = widget.curselection()
-  
-      selected_item_text = widget.get(selection[0])
-      helper = selected_item_text.split(" ")
-
-      self.selected_id = int(helper[0])
-      
-      self.update_item_info()
-    except Exception:
-      # list clicked but no items => index exception
-      return
+  def on_list_change(self):
+    self.update_item_info()
 
   def on_edit_item_click(self):
     if self.selected_id != None:
@@ -120,13 +151,10 @@ class ItemTab(Tab):
   def update_listbox(self):
     items = self.database.get_item_types()
     
-    self.listbox.delete(0,END)
-    
-    i = 0
+    self.clear_list()
     
     for item_id in items:
-      self.listbox.insert(i,str(item_id) + " " + self.database.item_types[item_id].name)
-      i += 1
+      self.add_item_to_list(item_id,self.database.item_types[item_id].name)
       
   def update_item_info(self):
     if self.selected_id != None:
@@ -140,9 +168,9 @@ class ItemTab(Tab):
       self.set_text_value("name","")
       self.model_widgets["item model"].clear()
 
-class NPCTab(Tab):
+class NPCTab(TabWithIDList):
   def __init__(self, parent, database):
-    Tab.__init__(self, parent, database)
+    TabWithIDList.__init__(self, parent, database)
     self.init_ui()  
     self.update_gui()
 
@@ -150,7 +178,21 @@ class NPCTab(Tab):
     self.style = Style()
     self.style.theme_use("default")
    
+    self.add_label("id")
+    self.add_text_input("id")
+    self.add_label("name")
+    self.add_text_input("name")
+    self.add_label("models name")
+    self.add_text_input("models name")
+    self.add_label("texture filename")
+    self.add_text_input("texture filename")
+    
+    self.create_list(self.on_listbox_change)
+   
     self.pack(fill=BOTH, expand=1)
+
+  def on_list_change(self):
+    return
 
   def update_gui(self):
     return
