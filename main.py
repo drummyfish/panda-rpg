@@ -461,6 +461,14 @@ class Game(ShowBase, DirectObject.DirectObject):
         textures[texture_name].setWrapU(Texture.WM_clamp)
         textures[texture_name].setWrapV(Texture.WM_clamp)
         
+    def make_npc_node(name, texture_name):
+      result = Actor(RESOURCE_PATH + name + ".egg")
+      
+      load_texture(texture_name)
+      result.setTexture(textures[texture_name])
+      
+      return result
+        
     def make_node(animated_texture_model,name="node"):     # makes a node out of AnimatedTextureModel object, handles loading models and textures and caches
       load_model(animated_texture_model.model_name)
       
@@ -715,6 +723,10 @@ class Game(ShowBase, DirectObject.DirectObject):
         self.run_scripts(prop.scripts_load,event_type="load",caller=prop)
       except Exception:
         pass
+       
+    self.rat = make_npc_node("rat","rat.png")
+    self.level_node_path.attachNewNode(self.rat.getNode(0))
+    self.rat.loop("idle",True)
      
   ## Runs given game script in the current context.
   #  @param filename name of the script (including extension but without the resource path)
