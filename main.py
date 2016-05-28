@@ -590,7 +590,8 @@ class Game(ShowBase, DirectObject.DirectObject):
 
         if level.get_tile(i,j).ceiling:
           tile_node_path = node_parent.attachNewNode(make_node(level.get_tile(i,j).ceiling_model,"ceiling " + coordinate_string))
-          tile_node_path.setPos(i,level.get_tile(i,j).ceiling_height,j)
+          tile_node_path.setPos(j,i,level.get_tile(i,j).ceiling_height)
+          tile_node_path.setHpr(90,90,level.get_tile(i,j).floor_orientation * 90)
 
     # optimisation: group the sublevel nodes together:
 
